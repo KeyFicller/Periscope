@@ -12,7 +12,7 @@ namespace periscope
     struct handle_deduction {};
 
     template <typename t>
-    concept next_deduction_enabled = requires(const t& _handle)
+    concept next_deduction_enabled = requires(const t & _handle)
     {
         handle_deduction<t>::next(_handle);
     };
@@ -24,16 +24,19 @@ namespace periscope
     };
 
     template <typename t>
+    class handle_manager;
+
+    template <typename t>
     class handle_allocator
     {
-        friend class handle_manager;
+        friend class handle_manager<t>;
     public:
         bool is_valid_handle(const t& _handle) const
         {
-            return !m_used_handles.find(_handle);
+            return !m_used_handles.count(_handle);
         }
 
-        void insert_handle(const t& _handle) const
+        void insert_handle(const t& _handle)
         {
             if (is_valid_handle(_handle))
                 m_used_handles.insert(_handle);
@@ -52,31 +55,33 @@ namespace periscope
     class handle_manager
     {
     public:
-        template <typename obj>
+        template <typename obj = object<t>>
         obj& access(const t& _handle) const
         {
             if (!exists(_handle))
-                throw std::exception("Invalid Handle");
-            obj* object = dynamic_cast<obj*>(m_map_objects.at(_handle));
+                throw std::exception(format_printer::print("[0]", prompt_id::k_invalid_handle, _handle).c_str());
+            obj* object = dynamic_cast<obj*>(m_map_objects.at(_handle).get());
             if (!object)
-                throw std::exception("Invalid Type");
+                throw std::exception(format_printer::print("[0]", prompt_id::k_not_that_type, typeid(obj).name()).c_str());
             return *object;
         }
 
         template <typename obj, typename... args>
-        obj& create(args&&... _args) requires overall_deduction_enabled<t>
+        obj& create(args&&... _args) requires overall_deduction_enabled<t>/* && std::is_base_of_v<object<t>, obj>*/
         {
-            t handle = handle_deduction::next(m_allocator.m_used_handles);
-
+            t handle = handle_deduction<t>::next(m_allocator.m_used_handles);
+            return create_at<obj, args&&...>(handle, std::forward<args>(_args)...);
         }
 
         template <typename obj, typename... args>
-        obj& create_at(const t& _handle, args&&... _args)
+        obj& create_at(const t& _handle, args&&... _args)/* requires std::is_base_of_v<object<t>, obj>*/
         {
             if (exists(_handle))
-                throw std::exception("Duplicate Handle");
-            m_allocator
-            m_map_objects[]
+                throw std::exception(format_printer::print("[0]", prompt_id::k_used_handle, _handle).c_str());
+            m_allocator.insert_handle(_handle);
+            m_map_objects[_handle] = std::reinterpret_pointer_cast<object<t>>(std::make_shared<obj>(std::forward<args>(_args)...));
+            m_map_objects[_handle]->set_handle(_handle);
+            return *reinterpret_cast<obj*>(m_map_objects[_handle].get());
         }
 
         bool exists(const t& _handle) const
@@ -84,10 +89,9 @@ namespace periscope
             return !m_allocator.is_valid_handle(_handle);
         }
 
-
     protected:
         handle_allocator<t> m_allocator;
-        std::unordered_map<t, object<t>*> m_map_objects;
+        std::unordered_map<t, std::shared_ptr<object<t>>> m_map_objects;
     };
 
     // ---------------------- Specialization(this) ------------------
@@ -103,10 +107,29 @@ namespace periscope
         {
             if (_handles.empty())
                 return 1;
-            return (*_handles.cbegin() + 1);
+            return (*std::max_element(_handles.begin(), _handles.end()) + 1);
         }
     };
 
+    template <typename t>
+    struct handle_deduction<t*>
+    {
+        static const void* reserved()
+        {
+            static intptr_t count = 1;
+            return reinterpret_cast<const void*>(count++);
+        }
+
+        static const void* next(void* _handle)
+        {
+            return reserved();
+        }
+
+        static const void* next(const std::set<const void*>& _handles)
+        {
+            return reserved();
+        }
+    };
 
     // --------------------- Specialization(other) ------------------
 }

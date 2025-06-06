@@ -1,17 +1,25 @@
 #pragma once
 
 #include <ios>
+#include <regex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
 
+#include "periscope_define.h"
+
+#define MAXIMUM_BUFFER_SIZE 4096
+
 namespace periscope
 {
+    enum class graph_type : uint8_t;
+
     // ------------------------ Main template -----------------------
-    struct printer
+    namespace printer
     {
         template <typename t>
-        std::string operator() (const t& _value) const
+        inline std::string print(const t& _value)
         {
             if constexpr (std::is_same_v<t, std::string> || std::is_same_v<t, const char*>)
                 return _value;
@@ -28,20 +36,20 @@ namespace periscope
                 return _value.to_string();
             }
 
-            return "{Undefined print behavior}";
+            return print(prompt_id::k_undefined_print);
         }
 
         template <unsigned n>
-        std::string operator()(const char(&_value)[n]) const
+        inline std::string print(const char(&_value)[n])
         {
             return _value;
         }
     };
 
-    struct format_printer
+    namespace format_printer
     {
         template <typename ...args>
-        std::string operator() (const std::string& _format, args&&... _args)
+        inline std::string print (const std::string& _format, args&&... _args)
         {
             std::string result = _format;
             format_printer_impl<0>(result, std::forward<args&&>(_args)...);
@@ -49,25 +57,72 @@ namespace periscope
         }
 
         template <unsigned n>
-        static void format_printer_impl(std::string& _buffer)
+        inline static void format_printer_impl(std::string& _buffer)
         {
             return;
         }
 
+        inline static void offset_place_holder(std::string& _buffer, const int _offset, const std::set<int>& exclude_idx, int* sum)
+        {
+            std::regex pattern(R"(\[(\d+)\])");
+            std::smatch match;
+            std::string result;
+            size_t last_pos = 0;
+
+            auto begin = _buffer.cbegin();
+            while (regex_search(begin, _buffer.cend(), match, pattern)) {
+                result.append(match.prefix().first, match.prefix().second);
+
+                int num = stoi(match[1]);
+                if (sum)
+                    *sum = std::max(*sum, num);
+                if (exclude_idx.count(num))
+                {
+                    result += "[" + match[1].str() + "]";
+                }
+                else
+                {
+                    result += "[" + std::to_string(num + _offset) + "]";
+                }
+                begin = match.suffix().first;
+            }
+
+            result.append(begin, _buffer.cend());
+            _buffer = result;
+        }
+
         template <unsigned n, typename arg, typename ...args>
-        static void format_printer_impl(std::string& _buffer, arg&& _arg, args&&... _args)
+        inline static void format_printer_impl(std::string& _buffer, arg&& _arg, args&&... _args)
         {
             const std::string from = "[" + std::to_string(n) + "]";
-            const std::string to = printer()(_arg);
+            std::string to = printer::print(_arg);
+
+            // Under test environment.
+            if (PSCP_CTX().gs_embed_print_placeholder_enabled)
+            {
+                int sum = -1;
+                offset_place_holder(to, n + 1, {}, &sum);
+                offset_place_holder(_buffer, sum + 1, { n }, nullptr);
+            }
+
             size_t start_pos = 0;
+            bool replaced = false;
             while ((start_pos = _buffer.find(from, start_pos)) != std::string::npos)
             {
                 _buffer.replace(start_pos, from.size(), to);
+                replaced = true;
                 start_pos += to.length();
+            }
+
+            if (!replaced)
+            {
+                auto error = format_printer::print("[0]", prompt_id::k_missing_placeholder, n);
+                throw std::exception(error.c_str());
             }
 
             format_printer_impl<n + 1>(_buffer, std::forward<args&&>(_args)...);
         }
+
     };
 
     // ---------------------- Specialization(this) ------------------
@@ -75,4 +130,13 @@ namespace periscope
 
 
     // --------------------- Specialization(other) ------------------
+    namespace printer
+    {
+        template <>
+        inline std::string print<prompt_id>(const prompt_id& _value)
+        {
+            return prompt(_value);
+        }
+
+    }
 }
