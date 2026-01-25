@@ -55,8 +55,8 @@ class graph : public graph_base<t>
     {
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
-        m_node_handles.push_back(result.handle());
-        result.set_insert_order(static_cast<int>(m_node_handles.size()));
+        m_object_handles.push_back(result.handle());
+        result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
     }
 
@@ -67,8 +67,8 @@ class graph : public graph_base<t>
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result =
           graph_base<t>::m_handle_manager.template create_at<obj, args&&...>(_handle, std::forward<args>(_args)...);
-        m_node_handles.push_back(_handle);
-        result.set_insert_order(static_cast<int>(m_node_handles.size()));
+        m_object_handles.push_back(_handle);
+        result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
     }
 
@@ -79,8 +79,8 @@ class graph : public graph_base<t>
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
         result.set_handle_manager(&graph_base<t>::handle_manager());
-        m_link_handles.push_back(result.handle());
-        result.set_insert_order(static_cast<int>(m_link_handles.size()));
+        m_object_handles.push_back(result.handle());
+        result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
     }
 
@@ -92,8 +92,8 @@ class graph : public graph_base<t>
         auto& result =
           graph_base<t>::m_handle_manager.template create_at<obj, args&&...>(_handle, std::forward<args>(_args)...);
         result.set_handle_manager(&graph_base<t>::handle_manager());
-        m_link_handles.push_back(_handle);
-        result.set_insert_order(static_cast<int>(m_link_handles.size()));
+        m_object_handles.push_back(_handle);
+        result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
     }
 
@@ -110,14 +110,7 @@ class graph : public graph_base<t>
             result += m_config.set_up();
             result += "\n";
 
-            // result += "Nodes: \n";
-            for (const auto& handle : m_node_handles) {
-                result += printer::print(graph_base<t>::m_handle_manager.access(handle));
-                result += "\n";
-            }
-
-            // result += "Links: \n";
-            for (const auto& handle : m_link_handles) {
+            for (const auto& handle : m_object_handles) {
                 result += printer::print(graph_base<t>::m_handle_manager.access(handle));
                 result += "\n";
             }
@@ -135,8 +128,7 @@ class graph : public graph_base<t>
     virtual ~graph() = default;
 
   protected:
-    std::vector<t> m_node_handles;
-    std::vector<t> m_link_handles;
+    std::vector<t> m_object_handles;
     graph_config<gt> m_config;
 };
 

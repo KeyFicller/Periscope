@@ -1,6 +1,7 @@
 #include "periscope.h"
 #include "periscope_key.h"
 #include "periscope_link.h"
+#include "periscope_node.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,7 @@ test_sequence_diagram()
     using user_node = periscope::node<PSCP_KEY_T(index_sample)>;
     using user_link = periscope::binary_link<PSCP_KEY_T(index_sample)>;
     using user_tag = periscope::unary_link<PSCP_KEY_T(index_sample)>;
+    using anchor_node = periscope::anchor_node<PSCP_KEY_T(index_sample)>;
 
     // Create participants (nodes in sequence diagram)
     auto& client = graph.add_node<user_node>().set_note("Client");
@@ -28,7 +30,9 @@ test_sequence_diagram()
     // Server queries Database
     auto& req2 = graph.add_link<user_link>(server, database).set_note("Query");
     // Database inquring loop
+    auto& anchor_s = graph.add_node<anchor_node>().set_note("Each item");
     auto& lop1 = graph.add_link<user_link>(database, database).set_note("Inquring");
+    auto& anchor_e = graph.add_node<anchor_node>().set_is_anchor_end(true);
     // Database returns result to Server
     auto& resp1 = graph.add_link<user_link>(database, server).set_note("Result");
     // Server sends response to Client

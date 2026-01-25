@@ -1,5 +1,6 @@
 #pragma once
 
+#include "periscope_define.h"
 #include "periscope_object.h"
 
 #include <map>
@@ -242,6 +243,47 @@ class span_node : public node<t>
   protected:
     date_tick m_start_tick;
     date_tick m_end_tick;
+};
+
+template<typename t>
+class anchor_node : public node<t>
+{
+    static constexpr std::string_view k_anchor_end = "$AnchorEnt$";
+
+  public:
+    anchor_node() = default;
+    ~anchor_node() override = default;
+
+  public:
+    anchor_node& set_is_anchor_end(bool _is_anchor_end)
+    {
+        if (_is_anchor_end)
+            node<t>::m_note = k_anchor_end;
+        else
+            node<t>::m_note = "";
+        return *this;
+    }
+
+    bool is_anchor_end() const { return node<t>::m_note == k_anchor_end; }
+
+  protected:
+    std::string to_string_impl() const override
+    {
+        if (is_anchor_end())
+            return "end";
+        std::string base = object<t>::to_string_impl();
+        switch (PSCP_CTX().gs_graph_type) {
+            case graph_type::k_sequence:
+                return format_printer::print("loop [0]", node<t>::m_note);
+            case graph_type::k_flow_chart:
+            case graph_type::k_careless:
+            case graph_type::k_gantt:
+            case graph_type::k_class_diagram:
+            default:
+                PSCP_NOT_IMPLEMENT();
+                return {};
+        }
+    }
 };
 
 // ---------------------- Specialization(this) ------------------
