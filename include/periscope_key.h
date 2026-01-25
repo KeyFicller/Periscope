@@ -2,30 +2,28 @@
 
 #include <type_traits>
 
-namespace periscope
+namespace periscope {
+// ------------------------ Main template -----------------------
+template<typename t>
+struct key_deduction
 {
-    // ------------------------ Main template -----------------------
-    template <typename t>
-    struct key_deduction
-    {
-        using type = t;
-    };
+    using type = t;
+};
 
-    template <typename t>
-    struct key_type
-    {
-        using type = typename key_deduction<t>::type;
-    };
+template<typename t>
+struct key_type
+{
+    using type = typename key_deduction<t>::type;
+};
 
-    // ---------------------- Specialization(this) ------------------
-    template <typename t>
-    struct key_deduction<t*>
-    {
-        using type = const void*;
-    };
+// ---------------------- Specialization(this) ------------------
+template<typename t>
+struct key_deduction<t*>
+{
+    using type = const void*;
+};
 
-
-    // --------------------- Specialization(other) ------------------
+// --------------------- Specialization(other) ------------------
 }
 
 #define PSCP_KEY_T(X) ::periscope::key_type<decltype(X)>::type
