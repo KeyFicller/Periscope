@@ -51,7 +51,7 @@ class graph : public graph_base<t>
 
     template<typename obj, typename... args>
     obj& add_node(args&&... _args)
-        requires std::is_base_of_v<node<t>, obj>
+        requires std::is_base_of_v<object_base<t>, obj>
     {
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
@@ -62,7 +62,7 @@ class graph : public graph_base<t>
 
     template<typename obj, typename... args>
     obj& add_node_at(const t& _handle, args&&... _args)
-        requires std::is_base_of_v<node<t>, obj>
+        requires std::is_base_of_v<object_base<t>, obj>
     {
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result =
@@ -74,11 +74,13 @@ class graph : public graph_base<t>
 
     template<typename obj, typename... args>
     obj& add_link(args&&... _args)
-        requires std::is_base_of_v<link_base<t>, obj>
+        requires std::is_base_of_v<object_base<t>, obj>
     {
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
-        result.set_handle_manager(&graph_base<t>::handle_manager());
+        if constexpr (requires { result.set_handle_manager(&graph_base<t>::handle_manager()); }) {
+            result.set_handle_manager(&graph_base<t>::handle_manager());
+        }
         m_object_handles.push_back(result.handle());
         result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
@@ -86,12 +88,14 @@ class graph : public graph_base<t>
 
     template<typename obj, typename... args>
     obj& add_link_at(const t& _handle, args&&... _args)
-        requires std::is_base_of_v<link_base<t>, obj>
+        requires std::is_base_of_v<object_base<t>, obj>
     {
         static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result =
           graph_base<t>::m_handle_manager.template create_at<obj, args&&...>(_handle, std::forward<args>(_args)...);
-        result.set_handle_manager(&graph_base<t>::handle_manager());
+        if constexpr (requires { result.set_handle_manager(&graph_base<t>::handle_manager()); }) {
+            result.set_handle_manager(&graph_base<t>::handle_manager());
+        }
         m_object_handles.push_back(_handle);
         result.set_insert_order(static_cast<int>(m_object_handles.size()));
         return result;
@@ -137,19 +141,19 @@ class graph : public graph_base<t>
 template<typename t>
 struct available_elements_traits<t, graph_type::k_flow_chart>
 {
-    using types = type_list<node<t>, link_base<t>>;
+    using types = type_list<node<t, void>, binary_link<t, void>>;
 };
 
 template<typename t>
 struct available_elements_traits<t, graph_type::k_sequence>
 {
-    using types = type_list<node<t>, link_base<t>>;
+    using types = type_list<node<t, void>, anchor_node<t>, unary_link<t>, binary_link<t, void>>;
 };
 
 template<typename t>
 struct available_elements_traits<t, graph_type::k_gantt>
 {
-    using types = type_list<span_node<t>, link_base<t>>;
+    using types = type_list<span_node<t>, binary_link<t, void>>;
 };
 
 // --------------------- Specialization(other) ------------------

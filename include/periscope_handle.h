@@ -49,7 +49,7 @@ template<typename t>
 class handle_manager
 {
   public:
-    template<typename obj = object<t>>
+    template<typename obj = object_base<t>>
     obj& access(const t& _handle) const
     {
         if (!exists(_handle))
@@ -62,20 +62,20 @@ class handle_manager
 
     template<typename obj, typename... args>
     obj& create(args&&... _args)
-        requires overall_deduction_enabled<t> /* && std::is_base_of_v<object<t>, obj>*/
+        requires overall_deduction_enabled<t> /* && std::is_base_of_v<object_base<t>, obj>*/
     {
         t handle = handle_deduction<t>::next(m_allocator.m_used_handles);
         return create_at<obj, args&&...>(handle, std::forward<args>(_args)...);
     }
 
     template<typename obj, typename... args>
-    obj& create_at(const t& _handle, args&&... _args) /* requires std::is_base_of_v<object<t>, obj>*/
+    obj& create_at(const t& _handle, args&&... _args) /* requires std::is_base_of_v<object_base<t>, obj>*/
     {
         if (exists(_handle))
             throw std::runtime_error(format_printer::print("[0]", prompt_id::k_used_handle, _handle));
         m_allocator.insert_handle(_handle);
         m_map_objects[_handle] =
-          std::reinterpret_pointer_cast<object<t>>(std::make_shared<obj>(std::forward<args>(_args)...));
+          std::reinterpret_pointer_cast<object_base<t>>(std::make_shared<obj>(std::forward<args>(_args)...));
         m_map_objects[_handle]->set_handle(_handle);
         return *reinterpret_cast<obj*>(m_map_objects[_handle].get());
     }
@@ -84,7 +84,7 @@ class handle_manager
 
   protected:
     handle_allocator<t> m_allocator;
-    std::unordered_map<t, std::shared_ptr<object<t>>> m_map_objects;
+    std::unordered_map<t, std::shared_ptr<object_base<t>>> m_map_objects;
 };
 
 // ---------------------- Specialization(this) ------------------

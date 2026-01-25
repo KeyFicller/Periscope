@@ -4,6 +4,7 @@
 #include "periscope_object.h"
 
 #include <map>
+#include <type_traits>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
@@ -20,13 +21,24 @@ enum class node_shape
     k_lean_r
 };
 
-template<typename t>
-class node : public object<t>
+template<typename t, typename derived = void>
+class node : public object<t, std::conditional_t<std::is_same_v<derived, void>, node<t>, derived>>
 {
   public:
-    std::string to_string_impl() const override
+    using base_object = object<t, std::conditional_t<std::is_same_v<derived, void>, node<t>, derived>>;
+
+    std::string to_string() const override
     {
-        std::string base = object<t>::to_string_impl();
+        if constexpr (std::is_same_v<derived, void>) {
+            return to_string_impl();
+        } else {
+            return static_cast<const derived*>(this)->to_string_impl();
+        }
+    }
+
+    std::string to_string_impl() const
+    {
+        std::string base = base_object::to_string_impl();
         switch (PSCP_CTX().gs_graph_type) {
             case graph_type::k_flow_chart:
                 return format_printer::print("[0]@{ shape: [1], label: \"[2]\" }", base, m_shape, m_note);
@@ -43,7 +55,7 @@ class node : public object<t>
 
     std::string sub_graph_tag() const
     {
-        std::string base = object<t>::to_string_impl();
+        std::string base = base_object::to_string_impl();
         // static std::map<node_shape, std::vector<std::string>> brackets = {
         //     {node_shape::k_rectangle, {"[", "]"}},
         //     {node_shape::k_rounded, {"(", ")"}},
@@ -75,6 +87,10 @@ class node : public object<t>
     std::string m_note;
     node_shape m_shape = node_shape::k_rectangle;
 };
+
+// Type alias for convenience
+template<typename t>
+using node_t = node<t, void>;
 
 struct date_duration
 {
@@ -197,7 +213,7 @@ struct date_tick
 };
 
 template<typename t>
-class span_node : public node<t>
+class span_node : public node<t, span_node<t>>
 {
   public:
     span_node(const date_tick& _start, const date_tick& _end)
@@ -224,12 +240,13 @@ class span_node : public node<t>
               format_printer::print("[0]", prompt_id::k_discontinuous_dateline, _last.m_end_tick, _end));
     }
 
-    std::string to_string_impl() const override
+    std::string to_string_impl() const
     {
-        std::string base = object<t>::to_string_impl();
+        std::string base = node<t, span_node<t>>::base_object::to_string_impl();
         switch (PSCP_CTX().gs_graph_type) {
             case graph_type::k_gantt:
-                return format_printer::print("[0]: [1], [2], [3]", node<t>::m_note, base, m_start_tick, m_end_tick);
+                return format_printer::print(
+                  "[0]: [1], [2], [3]", node<t, span_node<t>>::m_note, base, m_start_tick, m_end_tick);
             case graph_type::k_careless:
             case graph_type::k_flow_chart:
             case graph_type::k_sequence:
@@ -246,35 +263,35 @@ class span_node : public node<t>
 };
 
 template<typename t>
-class anchor_node : public node<t>
+class anchor_node : public node<t, anchor_node<t>>
 {
     static constexpr std::string_view k_anchor_end = "$AnchorEnt$";
 
   public:
     anchor_node() = default;
-    ~anchor_node() override = default;
+    ~anchor_node() = default;
 
   public:
     anchor_node& set_is_anchor_end(bool _is_anchor_end)
     {
         if (_is_anchor_end)
-            node<t>::m_note = k_anchor_end;
+            node<t, anchor_node<t>>::m_note = k_anchor_end;
         else
-            node<t>::m_note = "";
+            node<t, anchor_node<t>>::m_note = "";
         return *this;
     }
 
-    bool is_anchor_end() const { return node<t>::m_note == k_anchor_end; }
+    bool is_anchor_end() const { return node<t, anchor_node<t>>::m_note == k_anchor_end; }
 
-  protected:
-    std::string to_string_impl() const override
+  public:
+    std::string to_string_impl() const
     {
         if (is_anchor_end())
             return "end";
-        std::string base = object<t>::to_string_impl();
+        std::string base = node<t, anchor_node<t>>::base_object::to_string_impl();
         switch (PSCP_CTX().gs_graph_type) {
             case graph_type::k_sequence:
-                return format_printer::print("loop [0]", node<t>::m_note);
+                return format_printer::print("loop [0]", node<t, anchor_node<t>>::m_note);
             case graph_type::k_flow_chart:
             case graph_type::k_careless:
             case graph_type::k_gantt:

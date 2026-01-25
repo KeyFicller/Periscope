@@ -3,6 +3,7 @@
 #include "periscope_object.h"
 #include "periscope_printer.h"
 
+#include <type_traits>
 #include <vector>
 
 namespace periscope {
@@ -14,8 +15,11 @@ class graph;
 template<typename t>
 class handle_manager;
 
-template<typename t>
+template<typename t, typename derived>
 class node;
+
+template<typename t, typename derived>
+class link_base;
 
 enum class link_shape
 {
@@ -24,21 +28,34 @@ enum class link_shape
     k_bold = 0x04
 };
 
-template<typename t>
-class link_base : public object<t>
+template<typename t, typename derived = void>
+class link_base : public object<t, std::conditional_t<std::is_same_v<derived, void>, link_base<t>, derived>>
 {
   public:
+    using base_object = object<t, std::conditional_t<std::is_same_v<derived, void>, link_base<t>, derived>>;
+
     link_base(const std::vector<t>& _nodes)
       : m_nodes(_nodes)
     {
     }
-    ~link_base() override = default;
+    ~link_base() = default;
+
+    std::string to_string() const override
+    {
+        if constexpr (std::is_same_v<derived, void>) {
+            return to_string_impl();
+        } else {
+            return static_cast<const derived*>(this)->to_string_impl();
+        }
+    }
+
+    std::string to_string_impl() const { return base_object::to_string_impl(); }
 
     // TODO: change to friend.
   public:
-    void set_handle_manager(handle_manager<t>* _manager) { link_base<t>::m_handle_manager = _manager; }
+    void set_handle_manager(handle_manager<t>* _manager) { this->m_handle_manager = _manager; }
 
-    handle_manager<t>* handle_manager() const { return link_base<t>::m_handle_manager; }
+    handle_manager<t>* handle_manager() const { return this->m_handle_manager; }
 
   protected:
     std::vector<t> m_nodes;
@@ -46,20 +63,22 @@ class link_base : public object<t>
 };
 
 template<typename t = const void*>
-class unary_link : public link_base<t>
+class unary_link : public link_base<t, unary_link<t>>
 {
   public:
+    using base_link = link_base<t, unary_link<t>>;
+
     unary_link(const t& _attached)
-      : link_base<t>({ _attached })
+      : base_link({ _attached })
     {
     }
-    unary_link(const object<t>& _attached)
+    unary_link(const object_base<t>& _attached)
       : unary_link(_attached.handle())
     {
     }
-    ~unary_link() override = default;
+    ~unary_link() = default;
 
-    const t& attacted() const { return link_base<t>::m_nodes.at(0); }
+    const t& attacted() const { return base_link::m_nodes.at(0); }
 
     unary_link& set_note(const std::string& _note)
     {
@@ -67,12 +86,12 @@ class unary_link : public link_base<t>
         return *this;
     }
 
-    std::string to_string_impl() const override
+    std::string to_string_impl() const
     {
         switch (PSCP_CTX().gs_graph_type) {
             case graph_type::k_sequence: {
-                auto& attached_node = link_base<t>::handle_manager()->template access<node<t>>(attacted());
-                return "note right of " + attached_node.object<t>::to_string_impl() + " :" + m_note;
+                auto& attached_node = base_link::handle_manager()->template access<node<t, void>>(attacted());
+                return "note right of " + attached_node.object<t, node<t, void>>::to_string_impl() + " :" + m_note;
             }
             case graph_type::k_flow_chart:
             case graph_type::k_careless:
@@ -89,21 +108,32 @@ class unary_link : public link_base<t>
     std::string m_note;
 };
 
-template<typename t = const void*>
-class binary_link : public link_base<t>
+template<typename t = const void*, typename derived = void>
+class binary_link : public link_base<t, std::conditional_t<std::is_same_v<derived, void>, binary_link<t>, derived>>
 {
   public:
+    using base_link = link_base<t, std::conditional_t<std::is_same_v<derived, void>, binary_link<t>, derived>>;
+
     binary_link(const t& _from, const t& _to)
-      : link_base<t>({ _from, _to })
+      : base_link({ _from, _to })
     {
     }
-    binary_link(const object<t>& _from, const object<t>& _to)
+    binary_link(const object_base<t>& _from, const object_base<t>& _to)
       : binary_link(_from.handle(), _to.handle())
     {
     }
-    ~binary_link() override = default;
+    ~binary_link() = default;
 
-    std::string to_string_impl() const override
+    std::string to_string() const override
+    {
+        if constexpr (std::is_same_v<derived, void>) {
+            return to_string_impl();
+        } else {
+            return static_cast<const derived*>(this)->to_string_impl();
+        }
+    }
+
+    std::string to_string_impl() const
     {
         switch (PSCP_CTX().gs_graph_type) {
             case graph_type::k_flow_chart: {
@@ -119,15 +149,15 @@ class binary_link : public link_base<t>
                 return printer::print(from()) + arrow + printer::print(to());
             }
             case graph_type::k_sequence: {
-                auto& from_node = link_base<t>::handle_manager()->template access<node<t>>(from());
-                auto& to_node = link_base<t>::handle_manager()->template access<node<t>>(to());
+                auto& from_node = base_link::handle_manager()->template access<node<t, void>>(from());
+                auto& to_node = base_link::handle_manager()->template access<node<t, void>>(to());
                 std::string live_mark;
                 if (from_node.handle() != to_node.handle())
                     live_mark = from_node.insert_order() > to_node.insert_order()   ? "-"
                                 : from_node.insert_order() < to_node.insert_order() ? "+"
                                                                                     : "";
-                return from_node.object<t>::to_string_impl() + "->>" + live_mark + to_node.object<t>::to_string_impl() +
-                       ": " + m_note;
+                return from_node.object<t, node<t, void>>::to_string_impl() + "->>" + live_mark +
+                       to_node.object<t, node<t, void>>::to_string_impl() + ": " + m_note;
             }
             case graph_type::k_careless:
             case graph_type::k_gantt:
@@ -140,8 +170,8 @@ class binary_link : public link_base<t>
     }
 
   public:
-    const t& from() const { return link_base<t>::m_nodes.at(0); }
-    const t& to() const { return link_base<t>::m_nodes.at(1); }
+    const t& from() const { return base_link::m_nodes.at(0); }
+    const t& to() const { return base_link::m_nodes.at(1); }
 
     binary_link& set_note(const std::string& _note)
     {
@@ -165,29 +195,31 @@ class binary_link : public link_base<t>
 };
 
 template<typename t = const void*>
-class hierarchy_link : public binary_link<t>
+class hierarchy_link : public binary_link<t, hierarchy_link<t>>
 {
   public:
+    using base_binary = binary_link<t, hierarchy_link<t>>;
+
     hierarchy_link(const t& _ancestor, const t& _descendant)
-      : binary_link<t>(_ancestor, _descendant)
+      : base_binary(_ancestor, _descendant)
     {
     }
-    hierarchy_link(const object<t>& _ancestor, const object<t>& _descendant)
-      : binary_link<t>(_ancestor.handle(), _descendant.handle())
+    hierarchy_link(const object_base<t>& _ancestor, const object_base<t>& _descendant)
+      : base_binary(_ancestor.handle(), _descendant.handle())
     {
     }
-    ~hierarchy_link() override = default;
+    ~hierarchy_link() = default;
 
   public:
-    const t& ancestor() const { return binary_link<t>::from(); }
-    const t& descendant() const { return binary_link<t>::to(); }
+    const t& ancestor() const { return base_binary::from(); }
+    const t& descendant() const { return base_binary::to(); }
 
   public:
-    std::string to_string_impl() const override
+    std::string to_string_impl() const
     {
         std::string result;
         result += "subgraph ";
-        auto& ancestor_node = link_base<t>::handle_manager()->template access<node<t>>(ancestor());
+        auto& ancestor_node = base_binary::base_link::handle_manager()->template access<node<t, void>>(ancestor());
         result += ancestor_node.sub_graph_tag();
         result += "\n";
         result += printer::print(descendant());
