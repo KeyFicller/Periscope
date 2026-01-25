@@ -125,6 +125,9 @@ class graph : public graph_base<t>
 
     node<t>& access_node(const t& _handle) { return graph_base<t>::m_handle_manager.template access<node<t>>(_handle); }
 
+    // 检查对象是否已创建
+    bool exists(const t& _handle) const { return graph_base<t>::m_handle_manager.exists(_handle); }
+
   protected:
     graph() = default;
     virtual ~graph() = default;
