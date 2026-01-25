@@ -1,6 +1,7 @@
 #pragma once
 
 #include "periscope_define.h"
+#include "periscope_graph_config.h"
 #include "periscope_handle.h"
 #include "periscope_key.h"
 #include "periscope_link.h"
@@ -45,6 +46,8 @@ class graph : public graph_base<t>
         static graph gs_graph;
         return gs_graph;
     }
+
+    graph_config<gt>& config() { return m_config; }
 
     template<typename obj, typename... args>
     obj& add_node(args&&... _args)
@@ -104,6 +107,8 @@ class graph : public graph_base<t>
 
             result += printer::print(gt);
             result += "\n";
+            result += m_config.set_up();
+            result += "\n";
 
             // result += "Nodes: \n";
             for (const auto& handle : m_node_handles) {
@@ -132,6 +137,7 @@ class graph : public graph_base<t>
   protected:
     std::vector<t> m_node_handles;
     std::vector<t> m_link_handles;
+    graph_config<gt> m_config;
 };
 
 // ---------------------- Specialization(this) ------------------

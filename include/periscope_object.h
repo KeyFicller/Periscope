@@ -26,7 +26,11 @@ class object
   public:
     std::string to_string() const { return to_string_impl(); }
 
-    virtual std::string to_string_impl() const { return printer::print(m_handle); }
+    virtual std::string to_string_impl() const
+    {
+        // Can't use note right of 1 ...
+        return "\"" + printer::print(m_handle) + "\"";
+    }
 
     void set_insert_order(int _order) { m_insert_order = _order; }
 

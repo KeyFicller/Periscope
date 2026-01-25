@@ -1,6 +1,7 @@
 #pragma once
 
 #include "periscope_object.h"
+#include "periscope_printer.h"
 
 #include <vector>
 
@@ -45,6 +46,50 @@ class link_base : public object<t>
 };
 
 template<typename t = const void*>
+class unary_link : public link_base<t>
+{
+  public:
+    unary_link(const t& _attached)
+      : link_base<t>({ _attached })
+    {
+    }
+    unary_link(const object<t>& _attached)
+      : unary_link(_attached.handle())
+    {
+    }
+    ~unary_link() override = default;
+
+    const t& attacted() const { return link_base<t>::m_nodes.at(0); }
+
+    unary_link& set_note(const std::string& _note)
+    {
+        m_note = _note;
+        return *this;
+    }
+
+    std::string to_string_impl() const override
+    {
+        switch (PSCP_CTX().gs_graph_type) {
+            case graph_type::k_sequence: {
+                auto& attached_node = link_base<t>::handle_manager()->template access<node<t>>(attacted());
+                return "note right of " + attached_node.object<t>::to_string_impl() + " :" + m_note;
+            }
+            case graph_type::k_flow_chart:
+            case graph_type::k_careless:
+            case graph_type::k_gantt:
+            case graph_type::k_class_diagram:
+            default: {
+                PSCP_NOT_IMPLEMENT();
+                return {};
+            }
+        }
+    }
+
+  protected:
+    std::string m_note;
+};
+
+template<typename t = const void*>
 class binary_link : public link_base<t>
 {
   public:
@@ -76,10 +121,13 @@ class binary_link : public link_base<t>
             case graph_type::k_sequence: {
                 auto& from_node = link_base<t>::handle_manager()->template access<node<t>>(from());
                 auto& to_node = link_base<t>::handle_manager()->template access<node<t>>(to());
-                std::string live_mark = from_node.insert_order() > to_node.insert_order()   ? "-"
-                                        : from_node.insert_order() < to_node.insert_order() ? "+"
-                                                                                            : "";
-                return printer::print(from()) + "->>" + live_mark + printer::print(to()) + ": " + m_note;
+                std::string live_mark;
+                if (from_node.handle() != to_node.handle())
+                    live_mark = from_node.insert_order() > to_node.insert_order()   ? "-"
+                                : from_node.insert_order() < to_node.insert_order() ? "+"
+                                                                                    : "";
+                return from_node.object<t>::to_string_impl() + "->>" + live_mark + to_node.object<t>::to_string_impl() +
+                       ": " + m_note;
             }
             case graph_type::k_careless:
             case graph_type::k_gantt:

@@ -4,6 +4,7 @@ build/**
 # Visual Studio files and folder
 .vs/
 .vscode/
+.output/
 
 **.sln
 **.vcxproj
