@@ -5,13 +5,26 @@
 #include "periscope_key.h"
 #include "periscope_link.h"
 #include "periscope_node.h"
+#include "periscope_type.h"
 
 namespace periscope {
 // ------------------------ Main template -----------------------
 
 template<typename t, graph_type gt>
+struct available_elements_traits
+{
+    static_assert(false, "Invalid graph type");
+};
+
+template<typename t, graph_type gt>
 struct available_elements
-{};
+{
+    template<typename elem>
+    static constexpr bool contains()
+    {
+        return type_list_contains_derived_v<typename available_elements_traits<t, gt>::types, elem>;
+    }
+};
 
 template<typename t>
 class graph_base
@@ -37,9 +50,7 @@ class graph : public graph_base<t>
     obj& add_node(args&&... _args)
         requires std::is_base_of_v<node<t>, obj>
     {
-        if (!available_elements<t, gt>::template contains<obj>())
-            throw std::invalid_argument(format_printer::print(
-              "[0]", prompt_id::k_invalid_graph_element, typeid(obj).name(), typeid(graph).name()));
+        static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
         m_node_handles.push_back(result.handle());
         result.set_insert_order(static_cast<int>(m_node_handles.size()));
@@ -50,9 +61,7 @@ class graph : public graph_base<t>
     obj& add_node_at(const t& _handle, args&&... _args)
         requires std::is_base_of_v<node<t>, obj>
     {
-        if (!available_elements<t, gt>::template contains<obj>())
-            throw std::invalid_argument(format_printer::print(
-              "[0]", prompt_id::k_invalid_graph_element, typeid(obj).name(), typeid(graph).name()));
+        static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result =
           graph_base<t>::m_handle_manager.template create_at<obj, args&&...>(_handle, std::forward<args>(_args)...);
         m_node_handles.push_back(_handle);
@@ -64,9 +73,7 @@ class graph : public graph_base<t>
     obj& add_link(args&&... _args)
         requires std::is_base_of_v<link_base<t>, obj>
     {
-        if (!available_elements<t, gt>::template contains<obj>())
-            throw std::invalid_argument(format_printer::print(
-              "[0]", prompt_id::k_invalid_graph_element, typeid(obj).name(), typeid(graph).name()));
+        static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result = graph_base<t>::m_handle_manager.template create<obj, args&&...>(std::forward<args>(_args)...);
         result.set_handle_manager(&graph_base<t>::handle_manager());
         m_link_handles.push_back(result.handle());
@@ -78,9 +85,7 @@ class graph : public graph_base<t>
     obj& add_link_at(const t& _handle, args&&... _args)
         requires std::is_base_of_v<link_base<t>, obj>
     {
-        if (!available_elements<t, gt>::template contains<obj>())
-            throw std::invalid_argument(format_printer::print(
-              "[0]", prompt_id::k_invalid_graph_element, typeid(obj).name(), typeid(graph).name()));
+        static_assert(available_elements<t, gt>::template contains<obj>(), "Invalid graph element");
         auto& result =
           graph_base<t>::m_handle_manager.template create_at<obj, args&&...>(_handle, std::forward<args>(_args)...);
         result.set_handle_manager(&graph_base<t>::handle_manager());
@@ -132,39 +137,21 @@ class graph : public graph_base<t>
 // ---------------------- Specialization(this) ------------------
 
 template<typename t>
-struct available_elements<t, graph_type::k_flow_chart>
+struct available_elements_traits<t, graph_type::k_flow_chart>
 {
-    using types = std::tuple<node<t>, link_base<t>>;
-
-    template<typename elem>
-    static constexpr bool contains()
-    {
-        return (std::is_base_of_v<node<t>, elem> || std::is_base_of_v<link_base<t>, elem>);
-    }
+    using types = type_list<node<t>, link_base<t>>;
 };
 
 template<typename t>
-struct available_elements<t, graph_type::k_sequence>
+struct available_elements_traits<t, graph_type::k_sequence>
 {
-    using types = std::tuple<node<t>, link_base<t>>;
-
-    template<typename elem>
-    static constexpr bool contains()
-    {
-        return (std::is_base_of_v<node<t>, elem> || std::is_base_of_v<link_base<t>, elem>);
-    }
+    using types = type_list<node<t>, link_base<t>>;
 };
 
 template<typename t>
-struct available_elements<t, graph_type::k_gantt>
+struct available_elements_traits<t, graph_type::k_gantt>
 {
-    using types = std::tuple<span_node<t>, link_base<t>>;
-
-    template<typename elem>
-    static constexpr bool contains()
-    {
-        return (std::is_base_of_v<span_node<t>, elem> || std::is_base_of_v<link_base<t>, elem>);
-    }
+    using types = type_list<span_node<t>, link_base<t>>;
 };
 
 // --------------------- Specialization(other) ------------------

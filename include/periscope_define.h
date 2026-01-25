@@ -41,7 +41,7 @@ prompt(const prompt_id& _id)
         { prompt_id::k_missing_placeholder, "{[0] is not found during replacing.}" },
         { prompt_id::k_invalid_graph_element, "{Can't insert [0] to [1].}" },
         { prompt_id::k_invalid_handle, "{Object handle [0] invalid.}" },
-        { prompt_id::k_invalid_handle, "{Object is not a [0] type.}" },
+        { prompt_id::k_not_that_type, "{Object is not a [0] type.}" },
         { prompt_id::k_used_handle, "{Object handle [0] has been used.}" },
         { prompt_id::k_invalid_date_tick, "{Date format [0] can't be parsed, use HH::MM.}" },
         { prompt_id::k_invalid_date_duration, "{Date format [0] can't be parsed, use ?h?m.}" },

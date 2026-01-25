@@ -58,6 +58,24 @@ class return_argument
 template<auto candidate>
 using return_argument_t = typename return_argument<candidate>::type;
 
+template<typename list, typename elem>
+struct type_list_contains
+{
+    static constexpr bool value = false;
+};
+
+template<typename list, typename elem>
+constexpr bool type_list_contains_v = type_list_contains<list, elem>::value;
+
+template<typename list, typename elem>
+struct type_list_contains_derived
+{
+    static constexpr bool value = false;
+};
+
+template<typename list, typename elem>
+constexpr bool type_list_contains_derived_v = type_list_contains_derived<list, elem>::value;
+
 // ---------------------- Specialization(this) ------------------
 template<std::size_t index, typename first, typename... others>
 struct type_list_element<index, type_list<first, others...>> : type_list_element<index - 1u, type_list<others...>>
@@ -69,29 +87,18 @@ struct type_list_element<0u, type_list<first, others...>>
     using type = first;
 };
 
+template<typename... types, typename elem>
+struct type_list_contains<type_list<types...>, elem>
+{
+    static constexpr bool value = (std::is_same_v<types, elem> || ...);
+};
+
+template<typename... types, typename elem>
+struct type_list_contains_derived<type_list<types...>, elem>
+{
+    static constexpr bool value = (std::is_base_of_v<types, elem> || ...);
+};
+
 // --------------------- Specialization(other) ------------------
 
 }
-
-/*  Test code could be like:
-
-void fn(int, double, std::string);
-
-class A
-{
-public:
-    std::string fn(const A&, double) const;
-};
-
-
-    std::cout << typeid(periscope::nth_argument_t<0, fn>::type).name() << std::endl;
-    std::cout << typeid(periscope::nth_argument_t<1, fn>::type).name() << std::endl;
-    std::cout << typeid(periscope::nth_argument_t<2, fn>::type).name() << std::endl;
-    std::cout << typeid(periscope::return_argument_t<fn>).name() << std::endl;
-
-    std::cout << typeid(periscope::nth_argument_t<0, &A::fn>::type).name() << std::endl;
-    std::cout << typeid(periscope::nth_argument_t<1, &A::fn>::type).name() << std::endl;
-    std::cout << typeid(periscope::return_argument_t<&A::fn>).name() << std::endl;
-
-
-*/

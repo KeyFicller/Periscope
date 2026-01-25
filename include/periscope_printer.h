@@ -73,7 +73,7 @@ format_printer_impl(std::string& _buffer)
 inline static void
 offset_place_holder(std::string& _buffer, const int _offset, const std::set<int>& exclude_idx, int* sum)
 {
-    std::regex pattern(R"(\[(\d+)\])");
+    static std::regex pattern(R"(\[(\d+)\])");
     std::smatch match;
     std::string result;
     size_t last_pos = 0;
