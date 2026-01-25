@@ -40,16 +40,16 @@ class link_base : public object<t, std::conditional_t<std::is_same_v<derived, vo
     }
     ~link_base() = default;
 
-    std::string to_string() const override
+    std::string to_string(graph_type _graph_type) const override
     {
         if constexpr (std::is_same_v<derived, void>) {
-            return to_string_impl();
+            return to_string_impl(_graph_type);
         } else {
-            return static_cast<const derived*>(this)->to_string_impl();
+            return static_cast<const derived*>(this)->to_string_impl(_graph_type);
         }
     }
 
-    std::string to_string_impl() const { return base_object::to_string_impl(); }
+    std::string to_string_impl(graph_type _graph_type) const { return base_object::to_string_impl(_graph_type); }
 
     // TODO: change to friend.
   public:
@@ -86,12 +86,13 @@ class unary_link : public link_base<t, unary_link<t>>
         return *this;
     }
 
-    std::string to_string_impl() const
+    std::string to_string_impl(graph_type _graph_type) const
     {
-        switch (PSCP_CTX().gs_graph_type) {
+        switch (_graph_type) {
             case graph_type::k_sequence: {
                 auto& attached_node = base_link::handle_manager()->template access<node<t, void>>(attacted());
-                return "note right of " + attached_node.object<t, node<t, void>>::to_string_impl() + " :" + m_note;
+                return "note right of " + attached_node.object<t, node<t, void>>::to_string_impl(_graph_type) + " :" +
+                       m_note;
             }
             case graph_type::k_flow_chart:
             case graph_type::k_careless:
@@ -124,18 +125,18 @@ class binary_link : public link_base<t, std::conditional_t<std::is_same_v<derive
     }
     ~binary_link() = default;
 
-    std::string to_string() const override
+    std::string to_string(graph_type _graph_type) const override
     {
         if constexpr (std::is_same_v<derived, void>) {
-            return to_string_impl();
+            return to_string_impl(_graph_type);
         } else {
-            return static_cast<const derived*>(this)->to_string_impl();
+            return static_cast<const derived*>(this)->to_string_impl(_graph_type);
         }
     }
 
-    std::string to_string_impl() const
+    std::string to_string_impl(graph_type _graph_type) const
     {
-        switch (PSCP_CTX().gs_graph_type) {
+        switch (_graph_type) {
             case graph_type::k_flow_chart: {
                 std::string arrow;
                 if (m_note.empty()) {
@@ -156,8 +157,8 @@ class binary_link : public link_base<t, std::conditional_t<std::is_same_v<derive
                     live_mark = from_node.insert_order() > to_node.insert_order()   ? "-"
                                 : from_node.insert_order() < to_node.insert_order() ? "+"
                                                                                     : "";
-                return from_node.object<t, node<t, void>>::to_string_impl() + "->>" + live_mark +
-                       to_node.object<t, node<t, void>>::to_string_impl() + ": " + m_note;
+                return from_node.object<t, node<t, void>>::to_string_impl(_graph_type) + "->>" + live_mark +
+                       to_node.object<t, node<t, void>>::to_string_impl(_graph_type) + ": " + m_note;
             }
             case graph_type::k_careless:
             case graph_type::k_gantt:
@@ -215,12 +216,12 @@ class hierarchy_link : public binary_link<t, hierarchy_link<t>>
     const t& descendant() const { return base_binary::to(); }
 
   public:
-    std::string to_string_impl() const
+    std::string to_string_impl(graph_type _graph_type) const
     {
         std::string result;
         result += "subgraph ";
         auto& ancestor_node = base_binary::base_link::handle_manager()->template access<node<t, void>>(ancestor());
-        result += ancestor_node.sub_graph_tag();
+        result += ancestor_node.sub_graph_tag(_graph_type);
         result += "\n";
         result += printer::print(descendant());
         result += "\n";

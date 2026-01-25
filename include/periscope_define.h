@@ -95,7 +95,6 @@ class scoped_export
 
 struct context
 {
-    graph_type gs_graph_type = graph_type::k_careless;
     export_type gs_export_type = export_type::k_mermaid;
 
     // be careful with embed logic.

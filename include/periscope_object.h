@@ -24,7 +24,7 @@ class object_base
     void set_handle(const t& _handle) { m_handle = _handle; }
 
   public:
-    virtual std::string to_string() const = 0;
+    virtual std::string to_string(graph_type _graph_type) const = 0;
 
     void set_insert_order(int _order) { m_insert_order = _order; }
 
@@ -39,9 +39,12 @@ template<typename t, typename derived>
 class object : public object_base<t>
 {
   public:
-    std::string to_string() const override { return static_cast<const derived*>(this)->to_string_impl(); }
+    std::string to_string(graph_type _graph_type) const override
+    {
+        return static_cast<const derived*>(this)->to_string_impl(_graph_type);
+    }
 
-    std::string to_string_impl() const
+    std::string to_string_impl(graph_type) const
     {
         // Can't use note right of 1 ...
         return "\"" + printer::print(this->m_handle) + "\"";

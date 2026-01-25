@@ -103,7 +103,6 @@ class graph : public graph_base<t>
 
     std::string to_string() const
     {
-        PSCP_CTX().gs_graph_type = gt;
         std::string result;
 
         {
@@ -115,12 +114,11 @@ class graph : public graph_base<t>
             result += "\n";
 
             for (const auto& handle : m_object_handles) {
-                result += printer::print(graph_base<t>::m_handle_manager.access(handle));
+                auto& obj = graph_base<t>::m_handle_manager.access(handle);
+                result += obj.to_string(gt);
                 result += "\n";
             }
         }
-
-        PSCP_CTX().gs_graph_type = graph_type::k_careless;
 
         return result;
     }
