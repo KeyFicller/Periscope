@@ -2,9 +2,33 @@
 #include "periscope_key.h"
 #include "periscope_link.h"
 #include "periscope_node.h"
+#include "periscope_type_list.h"
+#include "periscope_type_traits_misc.h"
+#include "periscope_value_list.h"
+#include <cxxabi.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
+
+#ifdef _MSC_VER
+// MSVC 不需要 demangle
+std::string
+demangle_type_name(const char* name)
+{
+    return name;
+}
+#else
+// GCC/Clang 需要 demangle
+std::string
+demangle_type_name(const char* mangled_name)
+{
+    int status = 0;
+    std::unique_ptr<char, void (*)(void*)> result(abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status),
+                                                  std::free);
+    return (status == 0) ? result.get() : mangled_name;
+}
+#endif
 
 void
 test_sequence_diagram()
@@ -70,9 +94,45 @@ test_sequence_diagram()
     }
 }
 
+template<typename t>
+struct transformer_type
+{
+    using type = std::vector<t>;
+};
+
+template<auto val>
+struct transformer_value
+{
+    using value_type = decltype(val);
+    static constexpr value_type value = val + 2;
+};
+
+class user_class
+{
+  public:
+    void fn();
+    void fn_const() const;
+};
+
 int
 main()
 {
-    test_sequence_diagram();
+    // test_sequence_diagram();
+
+    using user_type_list = periscope::type_list<int, double, char, float>;
+    std::cout << demangle_type_name(typeid(user_type_list).name()) << std::endl;
+
+    using transformed_user_type_list = periscope::type_list_transform<user_type_list, transformer_type>::type;
+    std::cout << demangle_type_name(typeid(transformed_user_type_list).name()) << std::endl;
+
+    using user_value_list = periscope::value_list<1, 2, 3, 4, 5>;
+    std::cout << demangle_type_name(typeid(user_value_list).name()) << std::endl;
+
+    using transformed_user_value_list = periscope::value_list_transform<user_value_list, transformer_value>::type;
+    std::cout << demangle_type_name(typeid(transformed_user_value_list).name()) << std::endl;
+
+    using user_class_type = periscope::member_class_t<decltype(&user_class::fn)>;
+    std::cout << demangle_type_name(typeid(user_class_type).name()) << std::endl;
+
     return 0;
 }
