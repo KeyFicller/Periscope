@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graph/periscope_graph_fwd.h"
 #include <set>
 #include <string>
 #include <type_traits>
@@ -13,7 +14,7 @@ class graph;
 class base_handle
 {
   public:
-    virtual std::string print() const = 0;
+    virtual std::string print(graph_type graph_type) const = 0;
 };
 
 template<typename underlying_type = unsigned int>
@@ -29,10 +30,16 @@ class handle : public base_handle
 
     id_type id() const { return m_id; }
 
-    std::string print() const override
+    std::string print(graph_type graph_type) const override
     {
         if constexpr (std::is_same_v<id_type, std::string>) {
             return m_id;
+        } else if constexpr (std::is_integral_v<id_type>) {
+            if (graph_type == graph_type::k_sequence) {
+                return "OBJ" + std::to_string(m_id);
+            } else {
+                return std::to_string(m_id);
+            }
         } else {
             return std::to_string(m_id);
         }

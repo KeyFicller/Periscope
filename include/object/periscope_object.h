@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graph/periscope_graph_fwd.h"
 #include "object/periscope_handle.h"
 #include "object/periscope_object_properties.h"
 #include "type_hash/periscope_type_hash.h"
@@ -20,7 +21,7 @@ class base_object
 
   public:
     // interfaces
-    virtual std::string to_string() const = 0;
+    virtual std::string to_string(graph_type graph_type) const = 0;
 
   public:
     template<typename prop>
@@ -68,8 +69,14 @@ class base_object
         return *this;
     }
 
+    std::shared_ptr<base_handle> get_handle() const { return m_handle; }
+
   private:
     std::map<type_hash_result, std::any> m_properties;
+    template<typename underlying_type>
+    friend class graph;
+
+    std::shared_ptr<base_handle> m_handle;
 };
 
 template<typename derived>
@@ -88,16 +95,14 @@ class object : public base_object
     }
 
   public:
-    std::string to_string() const override
+    std::string to_string(graph_type graph_type) const override
     {
         if (!has<OP_printable>())
             return "";
-        return static_cast<const derived*>(this)->to_string_impl();
+        return static_cast<const derived*>(this)->to_string_impl(graph_type);
     }
 
-    std::shared_ptr<base_handle> get_handle() const { return m_handle; }
-
-    std::string to_string_impl() const
+    std::string to_string_impl(graph_type graph_type) const
     {
         if (has<OP_name>())
             return get<OP_name>().Value;
@@ -105,10 +110,6 @@ class object : public base_object
     }
 
   protected:
-    template<typename underlying_type>
-    friend class graph;
-
-    std::shared_ptr<base_handle> m_handle;
 };
 
 }

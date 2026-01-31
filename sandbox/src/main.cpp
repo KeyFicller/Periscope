@@ -5,6 +5,7 @@
 #include "object/periscope_object.h"
 #include "object/periscope_object_properties.h"
 
+#include <fstream>
 #include <iostream>
 
 int
@@ -18,7 +19,14 @@ main()
     _node2.set<OP_name>("Jane Doe").set<NP_shape>(NP_shape::k_rectangle);
     link& _link = _graph.new_object<link>();
     _link.set<LP_source>(_node.get_handle()).set<LP_target>(_node2.get_handle());
-    _graph.set<GP_type<unsigned int>>(GP_type<unsigned int>::k_flowchart);
+    link& _link2 = _graph.new_object<link>();
+    _link2.set<LP_source>(_node2.get_handle()).set<LP_target>(_node.get_handle());
+    _graph.template set<GP_type<unsigned int>>(graph_type::k_sequence)
+      .template set<GP_output_format<unsigned int>>(graph_output_format::k_markdown);
     std::cout << _graph.to_string() << std::endl;
+
+    std::ofstream fout(".output/temp.md");
+    fout << _graph.to_string() << std::endl;
+    fout.close();
     return 0;
 }
