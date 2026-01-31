@@ -3,6 +3,9 @@
 #include <functional>
 
 namespace periscope {
+// ------------------------ Main template -----------------------
+
+// guard is RAII guard to execute function on exit
 class guard
 {
   public:

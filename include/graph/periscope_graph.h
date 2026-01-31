@@ -17,6 +17,7 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
+// graph is container for nodes and links with graph type management
 template<typename underlying_type>
 class graph : public object<graph<underlying_type>>
 {
@@ -28,12 +29,14 @@ class graph : public object<graph<underlying_type>>
         this->template set<OP_printable>(true);
     }
 
+    // to_string is to convert graph to string representation
     std::string to_string() const
     {
         return object<graph<underlying_type>>::to_string(this->template get<GP_type<underlying_type>>().Value);
     }
 
   public:
+    // to_string_impl is implementation of object::to_string_impl
     std::string to_string_impl(graph_type graph_type) const
     {
         std::string str = "";
@@ -83,6 +86,7 @@ class graph : public object<graph<underlying_type>>
         return str;
     }
 
+    // for_each_object is to iterate over objects of specific type
     template<typename t>
     void for_each_object(const std::function<void(t&)>& callback) const
     {
@@ -94,6 +98,7 @@ class graph : public object<graph<underlying_type>>
     }
 
   public:
+    // new_object is to create a new object with auto-allocated handle
     template<typename t>
     t& new_object()
     {
@@ -107,6 +112,7 @@ class graph : public object<graph<underlying_type>>
         return ref;
     }
 
+    // new_object_at is to create a new object with specific handle
     template<typename t>
     t& new_object_at(const handle<underlying_type>& _handle)
     {
@@ -121,6 +127,7 @@ class graph : public object<graph<underlying_type>>
         return ref;
     }
 
+    // delete_object is to delete an object by handle
     void delete_object(const handle<underlying_type>& _handle)
     {
         if (!m_handle_manager.is_allocated(_handle))

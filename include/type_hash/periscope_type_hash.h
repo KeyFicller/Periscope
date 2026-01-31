@@ -4,10 +4,13 @@
 
 namespace periscope {
 // ------------------------ Main template -----------------------
+
+// type_hash_result is type alias for hash result
 using type_hash_result = std::size_t;
 
 namespace internal {
 
+// hash_key_impl is to get function signature string for type
 template<typename type>
 constexpr const char*
 hash_key_impl() noexcept
@@ -19,6 +22,7 @@ hash_key_impl() noexcept
 #endif
 }
 }
+
 // hash_key is the function signature of the type
 template<typename type>
 constexpr const char*
@@ -29,6 +33,7 @@ hash_key() noexcept
 }
 
 namespace internal {
+// strlen is compile-time string length calculation
 constexpr std::size_t
 strlen(const char* _str)
 {
@@ -38,6 +43,7 @@ strlen(const char* _str)
     return len;
 }
 
+// static_hash_impl is FNV-1a hash implementation for string
 constexpr type_hash_result
 static_hash_impl(const char* _str, std::size_t _len)
 {
@@ -52,6 +58,7 @@ static_hash_impl(const char* _str, std::size_t _len)
     return hash;
 }
 
+// static_hash_impl is to calculate hash for type
 template<typename type>
 constexpr type_hash_result
 static_hash_impl()
@@ -60,12 +67,11 @@ static_hash_impl()
 }
 }
 
-// static hash is the hash result of a type calculated in compile time
+// static_hash is the hash result of a type calculated in compile time
 template<typename type>
 constexpr type_hash_result
 static_hash()
 {
     return internal::static_hash_impl<type>();
 }
-// ---------------------- Specialization(this) ------------------
 }

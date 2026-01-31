@@ -9,8 +9,10 @@ namespace periscope {
 
 class base_object;
 
+// enum_type is type alias for enum values
 using enum_type = unsigned int;
 
+// base_property is base class for all properties
 template<typename value_type, typename owner>
 struct base_property
 {
@@ -22,12 +24,15 @@ struct base_property
     using parent_properties = type_list<>;
 };
 
+// OP_name is property for object name
 struct OP_name : base_property<std::string, base_object>
 {};
 
+// OP_printable is property for whether object is printable
 struct OP_printable : base_property<bool, base_object>
 {};
 
+// OP_type is property for object type hash
 struct OP_type : base_property<type_hash_result, base_object>
 {};
 }

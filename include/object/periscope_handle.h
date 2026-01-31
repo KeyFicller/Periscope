@@ -11,12 +11,15 @@ namespace periscope {
 template<typename underlying_type>
 class graph;
 
+// base_handle is base class for all handles
 class base_handle
 {
   public:
+    // print is interface to convert handle to string representation
     virtual std::string print(graph_type graph_type) const = 0;
 };
 
+// handle is typed handle with underlying type
 template<typename underlying_type = unsigned int>
 class handle : public base_handle
 {
@@ -28,8 +31,10 @@ class handle : public base_handle
     {
     }
 
+    // id is accessor to handle id
     id_type id() const { return m_id; }
 
+    // print is implementation of base_handle::print
     std::string print(graph_type graph_type) const override
     {
         if constexpr (std::is_same_v<id_type, std::string>) {
@@ -49,6 +54,7 @@ class handle : public base_handle
     id_type m_id;
 };
 
+// operator== is equality comparison for handles
 template<typename underlying_type>
 inline bool
 operator==(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
@@ -56,6 +62,7 @@ operator==(const handle<underlying_type>& lhs, const handle<underlying_type>& rh
     return lhs.id() == rhs.id();
 }
 
+// operator!= is inequality comparison for handles
 template<typename underlying_type>
 inline bool
 operator!=(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
@@ -63,6 +70,7 @@ operator!=(const handle<underlying_type>& lhs, const handle<underlying_type>& rh
     return lhs.id() != rhs.id();
 }
 
+// operator< is less-than comparison for handles
 template<typename underlying_type>
 inline bool
 operator<(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
@@ -70,6 +78,7 @@ operator<(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs
     return lhs.id() < rhs.id();
 }
 
+// operator> is greater-than comparison for handles
 template<typename underlying_type>
 inline bool
 operator>(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
@@ -77,10 +86,12 @@ operator>(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs
     return lhs.id() > rhs.id();
 }
 
+// handle_allocator is default allocator for handles
 template<typename underlying_type, typename = void>
 class handle_allocator
 {
   public:
+    // allocate is to allocate a new handle
     static handle<void*> allocate()
     {
         static unsigned int next_id = 0;
@@ -88,10 +99,12 @@ class handle_allocator
     }
 };
 
+// handle_manager is manager for handle allocation and deallocation
 template<typename underlying_type>
 class handle_manager
 {
   public:
+    // allocate is to allocate a unique handle
     handle<underlying_type> allocate()
     {
         while (true) {
@@ -103,10 +116,13 @@ class handle_manager
         }
     }
 
+    // deallocate is to deallocate a handle
     void deallocate(const handle<underlying_type>& handle) { m_handles.erase(handle); }
 
+    // is_allocated is to check if handle is allocated
     bool is_allocated(const handle<underlying_type>& handle) const { return m_handles.find(handle) != m_handles.end(); }
 
+    // allocate_at is to allocate a handle at specific value
     bool allocate_at(const handle<underlying_type>& handle) { return m_handles.insert(handle).second; }
 
   protected:
@@ -114,10 +130,12 @@ class handle_manager
 };
 
 // ------------------------ Specializations -----------------------
+// handle_allocator is specialization for integral types
 template<typename underlying_type>
 class handle_allocator<underlying_type, std::enable_if_t<std::is_integral_v<underlying_type>>>
 {
   public:
+    // allocate is to allocate a handle with integral type
     static handle<underlying_type> allocate()
     {
         static underlying_type next_id = 0;
@@ -125,10 +143,12 @@ class handle_allocator<underlying_type, std::enable_if_t<std::is_integral_v<unde
     }
 };
 
+// handle_allocator is specialization for std::string
 template<>
 class handle_allocator<std::string>
 {
   public:
+    // allocate is to allocate a handle with string type
     static handle<std::string> allocate()
     {
         static unsigned int next_id = 0;

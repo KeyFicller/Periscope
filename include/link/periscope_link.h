@@ -6,13 +6,16 @@
 #include <format>
 
 namespace periscope {
+// ------------------------ Main template -----------------------
 
+// link is graph link object connecting nodes
 class link : public object<link>
 {
   public:
     link() { set<OP_printable>(true); }
 
   public:
+    // to_string_impl is implementation of object::to_string_impl
     std::string to_string_impl(graph_type graph_type) const
     {
         switch (graph_type) {
