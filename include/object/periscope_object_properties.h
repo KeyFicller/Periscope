@@ -1,6 +1,7 @@
 #pragma once
 
 #include "type_hash/periscope_type_hash.h"
+#include "type_traits/periscope_type_list.h"
 #include <string>
 
 namespace periscope {
@@ -17,6 +18,8 @@ struct base_property
     type Value{};
 
     using owner_type = owner;
+    using child_properties = type_list<>;
+    using parent_properties = type_list<>;
 };
 
 struct OP_name : base_property<std::string, base_object>

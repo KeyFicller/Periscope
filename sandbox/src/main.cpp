@@ -28,5 +28,9 @@ main()
     std::ofstream fout(".output/temp.md");
     fout << _graph.to_string() << std::endl;
     fout.close();
+
+    _graph.remove<GP_type<unsigned int>>();
+    _graph.template set<GP_display_node<unsigned int>>(true);
+
     return 0;
 }

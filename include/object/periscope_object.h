@@ -13,6 +13,55 @@ namespace periscope {
 
 class base_object
 {
+  private:
+    template<typename child_list>
+    struct remove_child_properties_helper;
+
+    template<typename... child_props>
+    struct remove_child_properties_helper<type_list<child_props...>>
+    {
+        static void apply(base_object* self) { (self->template remove<child_props>(), ...); }
+    };
+
+    template<>
+    struct remove_child_properties_helper<type_list<>>
+    {
+        static void apply(base_object* self) {}
+    };
+
+    template<typename parent_list>
+    struct check_parent_properties_helper;
+
+    template<typename... parent_props>
+    struct check_parent_properties_helper<type_list<parent_props...>>
+    {
+        static void apply(const base_object* self)
+        {
+            if ((self->template has<parent_props>() && ...) == false)
+                throw std::runtime_error("Parent property doesn't exist");
+        }
+    };
+
+    template<>
+    struct check_parent_properties_helper<type_list<>>
+    {
+        static void apply(const base_object* self) {}
+    };
+
+    template<typename prop>
+    void on_property_removed()
+    {
+        using child_list = typename prop::child_properties;
+        remove_child_properties_helper<child_list>::apply(this);
+    }
+
+    template<typename prop>
+    void on_property_added()
+    {
+        using parent_list = typename prop::parent_properties;
+        check_parent_properties_helper<parent_list>::apply(this);
+    }
+
   protected:
     base_object() = default;
 
@@ -47,24 +96,27 @@ class base_object
     }
 
     template<typename prop>
-    prop& get_or_create()
-    {
-        if (!has<prop>())
-            m_properties[static_hash<prop>()] = prop{};
-        return get<prop>();
-    }
-
-    template<typename prop>
     base_object& create()
     {
+        on_property_added<prop>();
         if (!has<prop>())
             m_properties[static_hash<prop>()] = prop{};
         return *this;
     }
 
     template<typename prop>
+    prop& get_or_create()
+    {
+        if (!has<prop>()) {
+            create<prop>();
+        }
+        return get<prop>();
+    }
+
+    template<typename prop>
     base_object& remove()
     {
+        on_property_removed<prop>();
         m_properties.erase(static_hash<prop>());
         return *this;
     }
