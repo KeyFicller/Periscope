@@ -25,7 +25,7 @@ class graph : public object<graph<underlying_type>>
     graph()
     {
         // default type is flowchart
-        this->template set<GP_type<underlying_type>>(graph_type::k_flowchart);
+        this->template set<GP_type>(graph_type::k_flowchart);
         this->template set<OP_printable>(true);
     }
 
@@ -33,6 +33,19 @@ class graph : public object<graph<underlying_type>>
     std::string to_string() const
     {
         return object<graph<underlying_type>>::to_string(this->template get<GP_type<underlying_type>>().Value);
+    }
+
+    // Bring base class set into scope for non-template properties
+    using object<graph<underlying_type>>::set;
+
+    // set is to set property value with type checking
+    template<template<typename> class prop>
+    graph& set(const typename prop<underlying_type>::type& _value)
+    {
+        static_assert(std::is_base_of_v<typename prop<underlying_type>::owner_type, graph<underlying_type>>,
+                      "Owner must be a derived class of prop::owner_type");
+        this->template get_or_create<prop<underlying_type>>().Value = _value;
+        return *this;
     }
 
   public:
@@ -64,16 +77,10 @@ class graph : public object<graph<underlying_type>>
         });
 
         // Header info
-        switch (this->template get<GP_type<underlying_type>>().Value) {
-            case graph_type::k_flowchart:
-                str += "flowchart\n";
-                break;
-            case graph_type::k_sequence:
-                str += "sequenceDiagram\n";
-                break;
-            default:
-                throw std::runtime_error("Unsupported graph type");
-        }
+        str += this->template _V_str<GP_type<underlying_type>>(graph_type);
+        str += "\n";
+        str += this->template _V_str<GP_display_node<underlying_type>>(graph_type);
+        str += "\n";
 
         // Draw nodes
         for_each_object<node>(

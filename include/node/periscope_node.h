@@ -21,7 +21,7 @@ class node : public object<node>
         switch (graph_type) {
             case graph_type::k_flowchart: {
                 std::string handle_str = get_handle()->print(graph_type);
-                std::string shape_str = get<NP_shape>().Value == NP_shape::k_rectangle ? "rect" : "circle";
+                std::string shape_str = _V_str<NP_shape>(graph_type);
                 std::string label_str = get<OP_name>().Value;
                 return std::format("{}@{{ shape: {}, label: {} }}", handle_str, shape_str, label_str);
             }

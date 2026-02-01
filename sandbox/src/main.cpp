@@ -21,16 +21,17 @@ main()
     _link.set<LP_source>(_node.get_handle()).set<LP_target>(_node2.get_handle());
     link& _link2 = _graph.new_object<link>();
     _link2.set<LP_source>(_node2.get_handle()).set<LP_target>(_node.get_handle());
-    _graph.template set<GP_type<unsigned int>>(graph_type::k_sequence)
-      .template set<GP_output_format<unsigned int>>(graph_output_format::k_markdown);
+    _graph.template set<GP_type>(graph_type::k_sequence)
+      .template set<GP_output_format>(graph_output_format::k_markdown)
+      .template set<GP_display_node>(true);
     std::cout << _graph.to_string() << std::endl;
 
     std::ofstream fout(".output/temp.md");
     fout << _graph.to_string() << std::endl;
     fout.close();
 
-    _graph.remove<GP_type<unsigned int>>();
-    _graph.template set<GP_display_node<unsigned int>>(true);
+    // _graph.remove<GP_type<unsigned int>>();
+    // _graph.template set<GP_display_node<unsigned int>>(true);
 
     return 0;
 }

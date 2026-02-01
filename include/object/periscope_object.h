@@ -107,6 +107,15 @@ class base_object
         return std::any_cast<prop&>(m_properties[static_hash<prop>()]);
     }
 
+    // str is to convert property to string representation
+    template<typename prop>
+    std::string _V_str(graph_type _graph_type) const
+    {
+        if (!has<prop>())
+            return "";
+        return prop::to_string(get<prop>(), _graph_type);
+    }
+
     // create is to create a property if it doesn't exist
     template<typename prop>
     base_object& create()
