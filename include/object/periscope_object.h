@@ -107,12 +107,27 @@ class base_object
         return std::any_cast<prop&>(m_properties[static_hash<prop>()]);
     }
 
+    // is_printable_if_unset is to check if property is printable if unset
+    template<typename prop, typename = void>
+    struct is_printable_if_unset : std::false_type
+    {};
+
+    // is_printable_if_unset is specialization for property with to_string_default
+    template<typename prop>
+    struct is_printable_if_unset<prop, std::void_t<decltype(prop::to_string_default)>> : std::true_type
+    {};
+
     // str is to convert property to string representation
     template<typename prop>
     std::string _V_str(graph_type _graph_type) const
     {
-        if (!has<prop>())
-            return "";
+        if (!has<prop>()) {
+            if constexpr (is_printable_if_unset<prop>::value) {
+                return prop::to_string_default(_graph_type);
+            } else {
+                return "";
+            }
+        }
         return prop::to_string(get<prop>(), _graph_type);
     }
 
@@ -191,5 +206,4 @@ class object : public base_object
 
   protected:
 };
-
 }

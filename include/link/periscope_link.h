@@ -20,9 +20,15 @@ class link : public object<link>
     {
         switch (graph_type) {
             case graph_type::k_flowchart: {
+                std::string arrow_str = _V_str<LP_style>(graph_type);
+                if (has<OP_name>()) {
+                    std::string pre = arrow_str.substr(0, 2);
+                    arrow_str =
+                      pre + "\"" + _V_str<OP_name>(graph_type) + "\"" + arrow_str.substr((int)arrow_str.size() - 3, 3);
+                }
                 return std::format("{} {} {}",
                                    get<LP_source>().Value->print(graph_type),
-                                   "-->",
+                                   arrow_str,
                                    get<LP_target>().Value->print(graph_type));
             }
             case graph_type::k_sequence: {

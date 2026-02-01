@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graph/periscope_graph_fwd.h"
 #include "type_hash/periscope_type_hash.h"
 #include "type_traits/periscope_type_list.h"
 #include <string>
@@ -26,7 +27,9 @@ struct base_property
 
 // OP_name is property for object name
 struct OP_name : base_property<std::string, base_object>
-{};
+{
+    static std::string to_string(const OP_name& _property, graph_type) { return _property.Value; }
+};
 
 // OP_printable is property for whether object is printable
 struct OP_printable : base_property<bool, base_object>

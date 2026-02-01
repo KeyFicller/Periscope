@@ -76,10 +76,14 @@ class graph : public object<graph<underlying_type>>
             }
         });
 
-        // Header info
+        // Graph info
         str += this->template _V_str<GP_type<underlying_type>>(graph_type);
+        str += " ";
+        str += this->template _V_str<GP_flowchart_direction<underlying_type>>(graph_type);
         str += "\n";
-        str += this->template _V_str<GP_display_node<underlying_type>>(graph_type);
+
+        // Configuration info
+        str += this->template _V_str<GP_sequence_show_number<underlying_type>>(graph_type);
         str += "\n";
 
         // Draw nodes
