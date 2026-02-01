@@ -28,7 +28,10 @@ struct base_property
 // OP_name is property for object name
 struct OP_name : base_property<std::string, base_object>
 {
-    static std::string to_string(const OP_name& _property, graph_type) { return _property.Value; }
+    static std::string to_string(const OP_name& _property, graph_type _graph_type = io().GraphType)
+    {
+        return _property.Value;
+    }
 };
 
 // OP_printable is property for whether object is printable

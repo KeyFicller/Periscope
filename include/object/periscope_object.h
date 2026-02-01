@@ -79,7 +79,7 @@ class base_object
 
   public:
     // to_string is interface to convert object to string representation
-    virtual std::string to_string(graph_type graph_type) const = 0;
+    virtual std::string to_string(graph_type _graph_type = io().GraphType) const = 0;
 
   public:
     // has is whether the property exists
@@ -119,7 +119,7 @@ class base_object
 
     // str is to convert property to string representation
     template<typename prop>
-    std::string _V_str(graph_type _graph_type) const
+    std::string _V_str(graph_type _graph_type = io().GraphType) const
     {
         if (!has<prop>()) {
             if constexpr (is_printable_if_unset<prop>::value) {
@@ -189,15 +189,15 @@ class object : public base_object
 
   public:
     // to_string is implementation of base_object::to_string
-    std::string to_string(graph_type graph_type) const override
+    std::string to_string(graph_type _graph_type = io().GraphType) const override
     {
         if (!has<OP_printable>())
             return "";
-        return static_cast<const derived*>(this)->to_string_impl(graph_type);
+        return static_cast<const derived*>(this)->to_string_impl(_graph_type);
     }
 
     // to_string_impl is default implementation for derived classes
-    std::string to_string_impl(graph_type graph_type) const
+    std::string to_string_impl(graph_type _graph_type = io().GraphType) const
     {
         if (has<OP_name>())
             return get<OP_name>().Value;

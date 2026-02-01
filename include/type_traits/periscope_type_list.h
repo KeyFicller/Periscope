@@ -14,6 +14,15 @@ struct type_list
     static constexpr auto size = sizeof...(types);
 };
 
+// is_type_list is whether the type is a type_list
+template<typename type>
+struct is_type_list : std::false_type
+{};
+
+// is_type_list_v is whether the type is a type_list
+template<typename type>
+inline constexpr bool is_type_list_v = is_type_list<type>::value;
+
 // type_list_element is nth element of type_list
 template<std::size_t index, typename list>
 struct type_list_element;
@@ -95,6 +104,12 @@ template<typename list, template<typename> class transformer>
 using type_list_transform_t = typename type_list_transform<list, transformer>::type;
 
 // ---------------------- Specialization(this) ------------------
+
+// Specialization: type_list is a type_list
+template<typename... types>
+struct is_type_list<type_list<types...>> : std::true_type
+{};
+
 // Recursive removal of the first type from the list
 template<std::size_t index, typename first, typename... others>
 struct type_list_element<index, type_list<first, others...>> : type_list_element<index - 1u, type_list<others...>>

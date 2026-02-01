@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "graph/periscope_graph_properties.h"
 #include "link/periscope_link.h"
+#include "misc/periscope_note.h"
 #include "node/periscope_node.h"
 #include "object/periscope_handle.h"
 #include "object/periscope_object.h"
@@ -32,7 +33,10 @@ class graph : public object<graph<underlying_type>>
     // to_string is to convert graph to string representation
     std::string to_string() const
     {
-        return object<graph<underlying_type>>::to_string(this->template get<GP_type<underlying_type>>().Value);
+        if (!this->template has<GP_type<underlying_type>>())
+            throw std::runtime_error("Graph type not set, please set it before calling to_string");
+        io().GraphType = this->template get<GP_type<underlying_type>>().Value;
+        return object<graph<underlying_type>>::to_string();
     }
 
     // Bring base class set into scope for non-template properties
@@ -50,7 +54,7 @@ class graph : public object<graph<underlying_type>>
 
   public:
     // to_string_impl is implementation of object::to_string_impl
-    std::string to_string_impl(graph_type graph_type) const
+    std::string to_string_impl(graph_type _graph_type = io().GraphType) const
     {
         std::string str = "";
 
@@ -77,36 +81,50 @@ class graph : public object<graph<underlying_type>>
         });
 
         // Graph info
-        str += this->template _V_str<GP_type<underlying_type>>(graph_type);
+        str += this->template _V_str<GP_type<underlying_type>>();
         str += " ";
-        str += this->template _V_str<GP_flowchart_direction<underlying_type>>(graph_type);
+        str += this->template _V_str<GP_flowchart_direction<underlying_type>>();
         str += "\n";
 
         // Configuration info
-        str += this->template _V_str<GP_sequence_show_number<underlying_type>>(graph_type);
+        str += this->template _V_str<GP_sequence_show_number<underlying_type>>();
         str += "\n";
 
         // Draw nodes
-        for_each_object<node>(
-          [&str, graph_type](node& node) { str += std::format("{}\n", node.to_string(graph_type)); });
+        traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
 
-        // Draw links
-        for_each_object<link>(
-          [&str, graph_type](link& link) { str += std::format("{}\n", link.to_string(graph_type)); });
+        // Draw links and notes
+        traverser<type_list<link, note>>::traverse(
+          *this, [&str](base_object& object) { str += std::format("{}\n", object.to_string()); });
 
         return str;
     }
 
-    // for_each_object is to iterate over objects of specific type
     template<typename t>
-    void for_each_object(const std::function<void(t&)>& callback) const
+    struct traverser
     {
-        for (auto& ptr : m_elements) {
-            if (ptr->template get<OP_type>().Value == static_hash<t>()) {
-                callback(*static_cast<t*>(ptr.get()));
+        static void traverse(const graph<underlying_type>& _graph, const std::function<void(t&)>& _callback)
+        {
+            for (auto& ptr : _graph.m_elements) {
+                if (ptr->template get<OP_type>().Value == static_hash<t>()) {
+                    _callback(*static_cast<t*>(ptr.get()));
+                }
             }
         }
-    }
+    };
+
+    template<typename... ts>
+    struct traverser<type_list<ts...>>
+    {
+        static void traverse(const graph<underlying_type>& _graph, const std::function<void(base_object&)>& _callback)
+        {
+            for (auto& ptr : _graph.m_elements) {
+                if (((ptr->template get<OP_type>().Value == static_hash<ts>()) || ...)) {
+                    _callback(*static_cast<base_object*>(ptr.get()));
+                }
+            }
+        }
+    };
 
   public:
     // new_object is to create a new object with auto-allocated handle
@@ -121,6 +139,27 @@ class graph : public object<graph<underlying_type>>
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.template set<OP_type>(static_hash<t>());
         return ref;
+    }
+
+    // access is to access a object by handle
+    template<typename t>
+    t& access(const handle<underlying_type>& _handle)
+    {
+        for (auto& ptr : m_elements) {
+            if (ptr->template get<OP_type>().Value == static_hash<t>()) {
+                if (static_cast<handle<underlying_type>*>(ptr->get_handle().get())->id() == _handle.id()) {
+                    return *static_cast<t*>(ptr.get());
+                }
+            }
+        }
+        throw std::runtime_error(std::format("Object not found: {}", _handle.id()));
+    }
+
+    // access is to access a object by handle
+    template<typename t>
+    const t& access(const handle<underlying_type>& _handle) const
+    {
+        return const_cast<graph<underlying_type>*>(this)->access<t>(_handle);
     }
 
     // new_object_at is to create a new object with specific handle

@@ -34,27 +34,48 @@ struct LP_style : public base_property<enum_type, link>
     };
 
     // to_string is to convert property to string representation
-    static std::string to_string(const LP_style& _property, graph_type _graph_type)
+    static std::string to_string(const LP_style& _property, graph_type _graph_type = io().GraphType)
     {
-        if (_graph_type != graph_type::k_flowchart)
-            return "";
-        switch (_property.Value & ~style::k_arrow_mask) {
-            case style::k_solid:
-                return std::string("--") + (_property.Value & style::k_arrow_mask ? ">" : "");
-            case style::k_dashed:
-                return std::string("-.-") + (_property.Value & style::k_arrow_mask ? ">" : "");
-            case style::k_bold_solid:
-                return "==>";
-            default:
-                throw std::runtime_error("Unsupported style");
+        if (_graph_type == graph_type::k_flowchart) {
+            switch (_property.Value & ~style::k_arrow_mask) {
+                case style::k_solid:
+                    return std::string("--") + (_property.Value & style::k_arrow_mask ? ">" : "");
+                case style::k_dashed:
+                    return std::string("-.-") + (_property.Value & style::k_arrow_mask ? ">" : "");
+                case style::k_bold_solid:
+                    return "==>";
+                default:
+                    throw std::runtime_error("Unsupported style");
+            }
+        } else if (_graph_type == graph_type::k_sequence) {
+            switch (_property.Value & ~style::k_arrow_mask) {
+                case style::k_solid:
+                    return std::string("->") + (_property.Value & style::k_arrow_mask ? ">" : "");
+                case style::k_dashed:
+                    return std::string("-->") + (_property.Value & style::k_arrow_mask ? ">" : "");
+            }
         }
+
+        return "";
     }
 
     // to_string_default is to get default string representation
-    static std::string to_string_default(graph_type _graph_type)
+    static std::string to_string_default(graph_type _graph_type = io().GraphType)
     {
         static LP_style style{ style::k_solid | style::k_arrow_mask };
         return to_string(style, _graph_type);
     }
+};
+
+struct LP_activate : public base_property<bool, link>
+{
+    // to_string is to convert property to string representation
+    static std::string to_string(const LP_activate& _property, graph_type _graph_type = io().GraphType)
+    {
+        return _property.Value ? "+" : "-";
+    }
+
+    // to_string_default is to get default string representation
+    static std::string to_string_default(graph_type _graph_type = io().GraphType) { return ""; }
 };
 }

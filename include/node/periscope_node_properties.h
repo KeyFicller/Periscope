@@ -22,7 +22,7 @@ struct NP_shape : base_property<enum_type, node>
     };
 
     // to_string is to convert property to string representation
-    static std::string to_string(const NP_shape& _property, graph_type _graph_type)
+    static std::string to_string(const NP_shape& _property, graph_type _graph_type = io().GraphType)
     {
         if (_graph_type != graph_type::k_flowchart)
             return "";
@@ -41,7 +41,7 @@ struct NP_shape : base_property<enum_type, node>
     }
 
     // to_string_default is to get default string representation
-    static std::string to_string_default(graph_type _graph_type)
+    static std::string to_string_default(graph_type _graph_type = io().GraphType)
     {
         static NP_shape shp{ shape::k_rectangle };
         return to_string(shp, _graph_type);

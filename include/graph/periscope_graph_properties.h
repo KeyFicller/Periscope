@@ -18,7 +18,7 @@ template<typename underlying_type>
 struct GP_sequence_show_number : base_property<bool, graph<underlying_type>>
 {
     using parent_properties = type_list<GP_type<underlying_type>>;
-    static std::string to_string(const GP_sequence_show_number& _property, graph_type _graph_type)
+    static std::string to_string(const GP_sequence_show_number& _property, graph_type _graph_type = io().GraphType)
     {
         switch (_graph_type) {
             case graph_type::k_sequence:
@@ -35,7 +35,7 @@ struct GP_type : base_property<graph_type, graph<underlying_type>>
 {
     using child_properties = type_list<GP_sequence_show_number<underlying_type>>;
 
-    static std::string to_string(const GP_type& _property, graph_type)
+    static std::string to_string(const GP_type& _property, graph_type _graph_type = io().GraphType)
     {
         switch (_property.Value) {
             case graph_type::k_flowchart:
@@ -65,7 +65,7 @@ struct GP_flowchart_direction : base_property<enum_type, graph<underlying_type>>
         k_right_to_left,
     };
 
-    static std::string to_string(const GP_flowchart_direction& _property, graph_type _graph_type)
+    static std::string to_string(const GP_flowchart_direction& _property, graph_type _graph_type = io().GraphType)
     {
         if (_graph_type != graph_type::k_flowchart)
             return "";

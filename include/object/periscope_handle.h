@@ -16,7 +16,7 @@ class base_handle
 {
   public:
     // print is interface to convert handle to string representation
-    virtual std::string print(graph_type graph_type) const = 0;
+    virtual std::string print(graph_type _graph_type = io().GraphType) const = 0;
 };
 
 // handle is typed handle with underlying type
@@ -35,12 +35,12 @@ class handle : public base_handle
     id_type id() const { return m_id; }
 
     // print is implementation of base_handle::print
-    std::string print(graph_type graph_type) const override
+    std::string print(graph_type _graph_type = io().GraphType) const override
     {
         if constexpr (std::is_same_v<id_type, std::string>) {
             return m_id;
         } else if constexpr (std::is_integral_v<id_type>) {
-            if (graph_type == graph_type::k_sequence) {
+            if (_graph_type == graph_type::k_sequence) {
                 return "OBJ" + std::to_string(m_id);
             } else {
                 return std::to_string(m_id);
@@ -57,33 +57,33 @@ class handle : public base_handle
 // operator== is equality comparison for handles
 template<typename underlying_type>
 inline bool
-operator==(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
+operator==(const handle<underlying_type>& _lhs, const handle<underlying_type>& _rhs)
 {
-    return lhs.id() == rhs.id();
+    return _lhs.id() == _rhs.id();
 }
 
 // operator!= is inequality comparison for handles
 template<typename underlying_type>
 inline bool
-operator!=(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
+operator!=(const handle<underlying_type>& _lhs, const handle<underlying_type>& _rhs)
 {
-    return lhs.id() != rhs.id();
+    return _lhs.id() != _rhs.id();
 }
 
 // operator< is less-than comparison for handles
 template<typename underlying_type>
 inline bool
-operator<(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
+operator<(const handle<underlying_type>& _lhs, const handle<underlying_type>& _rhs)
 {
-    return lhs.id() < rhs.id();
+    return _lhs.id() < _rhs.id();
 }
 
 // operator> is greater-than comparison for handles
 template<typename underlying_type>
 inline bool
-operator>(const handle<underlying_type>& lhs, const handle<underlying_type>& rhs)
+operator>(const handle<underlying_type>& _lhs, const handle<underlying_type>& _rhs)
 {
-    return lhs.id() > rhs.id();
+    return _lhs.id() > _rhs.id();
 }
 
 // handle_allocator is default allocator for handles
@@ -108,22 +108,25 @@ class handle_manager
     handle<underlying_type> allocate()
     {
         while (true) {
-            auto handle = handle_allocator<underlying_type>::allocate();
-            if (m_handles.find(handle) == m_handles.end()) {
-                m_handles.insert(handle);
-                return handle;
+            auto _handle = handle_allocator<underlying_type>::allocate();
+            if (m_handles.find(_handle) == m_handles.end()) {
+                m_handles.insert(_handle);
+                return _handle;
             }
         }
     }
 
     // deallocate is to deallocate a handle
-    void deallocate(const handle<underlying_type>& handle) { m_handles.erase(handle); }
+    void deallocate(const handle<underlying_type>& _handle) { m_handles.erase(_handle); }
 
     // is_allocated is to check if handle is allocated
-    bool is_allocated(const handle<underlying_type>& handle) const { return m_handles.find(handle) != m_handles.end(); }
+    bool is_allocated(const handle<underlying_type>& _handle) const
+    {
+        return m_handles.find(_handle) != m_handles.end();
+    }
 
     // allocate_at is to allocate a handle at specific value
-    bool allocate_at(const handle<underlying_type>& handle) { return m_handles.insert(handle).second; }
+    bool allocate_at(const handle<underlying_type>& _handle) { return m_handles.insert(_handle).second; }
 
   protected:
     std::set<handle<underlying_type>> m_handles;
