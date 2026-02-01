@@ -187,6 +187,18 @@ class object : public base_object
         return *this;
     }
 
+    // set overload: accept objects with get_handle() for handle properties
+    template<typename prop, typename t>
+        requires(std::is_same_v<typename prop::type, std::shared_ptr<base_handle>> && has_get_handle<t>::value &&
+                 !std::is_same_v<t, typename prop::type>)
+    object& set(const t& _value)
+    {
+        static_assert(std::is_base_of_v<typename prop::owner_type, derived>,
+                      "Owner must be a derived class of prop::owner_type");
+        get_or_create<prop>().Value = _value.get_handle();
+        return *this;
+    }
+
   public:
     // to_string is implementation of base_object::to_string
     std::string to_string(graph_type _graph_type = io().GraphType) const override

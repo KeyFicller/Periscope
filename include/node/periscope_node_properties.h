@@ -16,7 +16,6 @@ struct NP_shape : base_property<enum_type, node>
     enum shape : enum_type
     {
         k_rectangle,
-        k_round_rectangle,
         k_diamond,
         k_parallelogram,
     };
@@ -29,8 +28,6 @@ struct NP_shape : base_property<enum_type, node>
         switch (_property.Value) {
             case shape::k_rectangle:
                 return "rect";
-            case shape::k_round_rectangle:
-                return "roundrect";
             case shape::k_diamond:
                 return "diamond";
             case shape::k_parallelogram:

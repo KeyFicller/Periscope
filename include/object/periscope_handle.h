@@ -2,6 +2,7 @@
 
 #include "graph/periscope_graph_fwd.h"
 #include <set>
+#include <sstream>
 #include <string>
 #include <type_traits>
 
@@ -45,6 +46,10 @@ class handle : public base_handle
             } else {
                 return std::to_string(m_id);
             }
+        } else if constexpr (std::is_pointer_v<id_type>) {
+            std::ostringstream oss;
+            oss << "0x" << std::hex << reinterpret_cast<uintptr_t>(m_id);
+            return oss.str();
         } else {
             return std::to_string(m_id);
         }
@@ -156,6 +161,19 @@ class handle_allocator<std::string>
     {
         static unsigned int next_id = 0;
         return handle<std::string>("handle_" + std::to_string(next_id++));
+    }
+};
+
+// handle_allocator is specialization for const void*
+template<>
+class handle_allocator<const void*>
+{
+  public:
+    // allocate is to allocate a handle with const void* type
+    static handle<const void*> allocate()
+    {
+        static unsigned int next_id = 0;
+        return handle<const void*>(reinterpret_cast<const void*>(next_id++));
     }
 };
 

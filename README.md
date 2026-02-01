@@ -1,159 +1,150 @@
 # Periscope
 
-一个用于生成 Mermaid 图表的 C++ 模板库，支持流程图和序列图。
+A C++ template library for generating Mermaid diagrams, supporting flowcharts and sequence diagrams.
 
-## 快速开始
+## Example 1: Flowchart (using int as handle)
 
-### 示例 1：流程图
+Create a flowchart directly using the API with `int` as the handle type:
 
 ```cpp
-#include "graph/periscope_graph.h"
-#include "graph/periscope_graph_properties.h"
-#include "node/periscope_node.h"
-#include "node/periscope_node_properties.h"
-#include "link/periscope_link.h"
-#include "link/periscope_link_properties.h"
-#include "object/periscope_object_properties.h"
+#include "periscope.h"
 #include <iostream>
 
 int main() {
     using namespace periscope;
     
-    graph<unsigned int> _graph;
+    graph<int> _graph;
     
-    // 创建节点
+    // Create nodes
     node& start = _graph.new_object<node>();
-    start.set<OP_name>("开始").set<NP_shape>(NP_shape::k_rectangle);
+    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle);
     
     node& process = _graph.new_object<node>();
-    process.set<OP_name>("处理").set<NP_shape>(NP_shape::k_round_rectangle);
+    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle);
+    
+    node& decision = _graph.new_object<node>();
+    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond);
     
     node& end = _graph.new_object<node>();
-    end.set<OP_name>("结束").set<NP_shape>(NP_shape::k_rectangle);
+    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle);
     
-    // 创建连接
+    // Create links
     link& link1 = _graph.new_object<link>();
-    link1.set<LP_source>(start.get_handle())
-         .set<LP_target>(process.get_handle())
+    link1.set<LP_source>(start)
+         .set<LP_target>(process)
          .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
     
     link& link2 = _graph.new_object<link>();
-    link2.set<LP_source>(process.get_handle())
-         .set<LP_target>(end.get_handle())
+    link2.set<LP_source>(process)
+         .set<LP_target>(decision)
          .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
     
-    // 配置图表
+    link& link3 = _graph.new_object<link>();
+    link3.set<LP_source>(decision)
+         .set<LP_target>(end)
+         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)
+         .set<OP_name>("Yes");
+    
+    // Configure graph
     _graph.template set<GP_type>(graph_type::k_flowchart)
           .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_flowchart_direction>(
-              GP_flowchart_direction<unsigned int>::k_top_to_down);
-    
+          .template set<GP_flowchart_direction>(GP_flowchart_direction<int>::k_top_to_down);
     std::cout << _graph.to_string() << std::endl;
     return 0;
 }
 ```
 
-### 示例 2：序列图
+**Output:**
+
+```mermaid
+flowchart TD
+
+0@{ shape: rect, label: Start }
+1@{ shape: rect, label: Process Data }
+2@{ shape: diamond, label: Decision }
+3@{ shape: rect, label: End }
+0 --> 1
+1 --> 2
+2 --"Yes"--> 3
+```
+
+## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)
+
+Hook object interactions during program execution, using object pointers as handles:
 
 ```cpp
-#include "graph/periscope_graph.h"
-#include "graph/periscope_graph_properties.h"
-#include "node/periscope_node.h"
-#include "link/periscope_link.h"
-#include "object/periscope_object_properties.h"
+#include "periscope.h"
 #include <iostream>
+#include <map>
+
+class Service {
+public:
+    std::string name;
+    Service(const std::string& n) : name(n) {}
+    
+    static graph<const void*>& get_hook_graph() {
+        static graph<const void*> hook_graph;
+        return hook_graph;
+    }
+    
+    void send_request(Service* target, const std::string& msg) {
+        auto& hook_graph = get_hook_graph();
+        static std::map<const void*, bool> registered;
+        
+        handle<const void*> this_handle(reinterpret_cast<const void*>(this));
+        handle<const void*> target_handle(reinterpret_cast<const void*>(target));
+        
+        if (!registered[this]) {
+            hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
+            registered[this] = true;
+        }
+        if (!registered[target]) {
+            hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
+            registered[target] = true;
+        }
+        
+        link& req = hook_graph.new_object<link>();
+        auto src_handle = hook_graph.access<node>(this_handle).get_handle();
+        auto dst_handle = hook_graph.access<node>(target_handle).get_handle();
+        req.set<LP_source>(src_handle).set<LP_target>(dst_handle).set<OP_name>(msg);
+    }
+    
+    static void print_graph() {
+        auto& hook_graph = get_hook_graph();
+        hook_graph.template set<GP_type>(graph_type::k_sequence)
+                  .template set<GP_output_format>(graph_output_format::k_markdown)
+                  .template set<GP_sequence_show_number>(true);
+        std::cout << hook_graph.to_string() << std::endl;
+    }
+};
 
 int main() {
-    using namespace periscope;
+    Service client("Client");
+    Service server("Server");
+    Service database("Database");
     
-    graph<unsigned int> _graph;
+    // Business logic triggers hooks
+    client.send_request(&server, "Request Data");
+    server.send_request(&database, "Query");
+    database.send_request(&server, "Result");
+    server.send_request(&client, "Response");
     
-    // 创建参与者
-    node& client = _graph.new_object<node>();
-    client.set<OP_name>("Client");
-    
-    node& server = _graph.new_object<node>();
-    server.set<OP_name>("Server");
-    
-    // 创建交互
-    link& req = _graph.new_object<link>();
-    req.set<LP_source>(client.get_handle())
-       .set<LP_target>(server.get_handle())
-       .set<OP_name>("Request");
-    
-    // 配置图表
-    _graph.template set<GP_type>(graph_type::k_sequence)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_sequence_show_number>(true);
-    
-    std::cout << _graph.to_string() << std::endl;
+    // Output sequence diagram
+    Service::print_graph();
     return 0;
 }
 ```
 
-## API 概览
+**Output:**
 
-### 创建对象
-
-```cpp
-// 创建节点
-node& n = graph.new_object<node>();
-
-// 创建连接
-link& l = graph.new_object<link>();
+```mermaid
+sequenceDiagram 
+autonumber
+participant 0x16fb52dc8 as Client
+participant 0x16fb52d88 as Server
+participant 0x16fb52d58 as Database
+0x16fb52dc8 ->> 0x16fb52d88 : Request Data
+0x16fb52d88 ->> 0x16fb52d58 : Query
+0x16fb52d58 ->> 0x16fb52d88 : Result
+0x16fb52d88 ->> 0x16fb52dc8 : Response
 ```
-
-### 设置属性
-
-```cpp
-// 节点属性
-node.set<OP_name>("名称")                    // 设置名称
-    .set<NP_shape>(NP_shape::k_rectangle);   // 设置形状
-
-// 连接属性
-link.set<LP_source>(source.get_handle())     // 设置源节点
-    .set<LP_target>(target.get_handle())     // 设置目标节点
-    .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)  // 设置样式
-    .set<OP_name>("标签");                   // 设置标签
-
-// 图表属性
-graph.template set<GP_type>(graph_type::k_flowchart)  // 设置图表类型
-      .template set<GP_output_format>(graph_output_format::k_markdown)  // 输出格式
-      .template set<GP_flowchart_direction>(GP_flowchart_direction<unsigned int>::k_top_to_down)  // 流程图方向
-      .template set<GP_sequence_show_number>(true);  // 序列图显示编号
-```
-
-## 属性说明
-
-### 节点形状 (NP_shape)
-- `k_rectangle` - 矩形
-- `k_round_rectangle` - 圆角矩形
-- `k_diamond` - 菱形
-- `k_parallelogram` - 平行四边形
-
-### 连接样式 (LP_style)
-- `k_solid` - 实线
-- `k_dashed` - 虚线
-- `k_bold_solid` - 粗实线
-- `k_arrow_mask` - 箭头（可与其他样式组合使用 `|`）
-
-### 流程图方向 (GP_flowchart_direction)
-- `k_top_to_down` - 从上到下 (TD)
-- `k_down_to_top` - 从下到上 (BT)
-- `k_left_to_right` - 从左到右 (LR)
-- `k_right_to_left` - 从右到左 (RL)
-
-### 图表类型 (GP_type)
-- `k_flowchart` - 流程图
-- `k_sequence` - 序列图
-
-### 输出格式 (GP_output_format)
-- `k_markdown` - Markdown 格式（带代码块）
-- `k_mermaid` - 纯 Mermaid 格式
-
-## 特性
-
-- **类型安全**：使用模板元编程确保类型安全
-- **属性系统**：灵活的属性系统，支持链式调用
-- **多种图表**：支持流程图和序列图
-- **自动格式化**：自动生成 Mermaid 代码
