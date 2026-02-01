@@ -24,7 +24,7 @@ struct graph_io_context
 };
 
 // io is to get graph io context
-extern graph_io_context&
+inline graph_io_context&
 io()
 {
     static graph_io_context _instance;

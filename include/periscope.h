@@ -1,5 +1,8 @@
 #pragma once
 
+// Convenience header: includes all Periscope library headers
+// This header is intended to provide a single include point for all functionality
+
 #include "graph/periscope_graph.h"
 #include "graph/periscope_graph_properties.h"
 #include "link/periscope_link.h"

@@ -36,6 +36,8 @@ class link : public object<link>
                                    get<LP_target>().Value->print(),
                                    _V_str<OP_name>());
             }
+            default:
+                throw std::runtime_error("Unsupported graph type for link");
         }
     }
 };
