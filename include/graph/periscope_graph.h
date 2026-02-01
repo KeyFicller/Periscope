@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "graph/periscope_graph_properties.h"
 #include "link/periscope_link.h"
+#include "misc/periscope_class_def.h"
 #include "misc/periscope_note.h"
 #include "node/periscope_node.h"
 #include "object/periscope_handle.h"
@@ -79,6 +80,11 @@ class graph : public object<graph<underlying_type>>
             }
         });
 
+        // Title
+        if (this->template has<OP_name>()) {
+            str += std::format("---\ntitle: {}\n---\n", this->template _V_str<OP_name>());
+        }
+
         // Graph info
         str += this->template _V_str<GP_type<underlying_type>>();
         str += " ";
@@ -89,6 +95,10 @@ class graph : public object<graph<underlying_type>>
         str += this->template _V_str<GP_sequence_show_number<underlying_type>>();
         str += "\n";
 
+        // Forward declare class definitions
+        traverser<class_def>::traverse(
+          *this, [&str](class_def& class_def) { str += std::format("{}\n", class_def.to_string()); });
+
         // Draw nodes
         traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
 
@@ -96,6 +106,13 @@ class graph : public object<graph<underlying_type>>
         traverser<type_list<link, note>>::traverse(
           *this, [&str](base_object& object) { str += std::format("{}\n", object.to_string()); });
 
+        // Assign node names to class definitions
+        traverser<node>::traverse(*this, [&str](node& node) {
+            if (node.has<NP_class_def>()) {
+                str +=
+                  std::format("class {} {}Class\n", node.get_handle()->print(), node.template _V_str<NP_class_def>());
+            }
+        });
         return str;
     }
 

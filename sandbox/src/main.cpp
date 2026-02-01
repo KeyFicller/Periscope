@@ -9,19 +9,33 @@ void
 example1_flowchart()
 {
     graph<int> _graph;
+    _graph.set<OP_name>("Hello");
+
+    // Create class definitions
+    class_def& start_class = _graph.new_object<class_def>();
+    start_class.set<OP_name>("Start").set<MCD_fill>("#4A90E2").set<MCD_stroke>("#2E5C8A").set<MCD_color>("#fff");
+
+    class_def& process_class = _graph.new_object<class_def>();
+    process_class.set<OP_name>("Process").set<MCD_fill>("#F5A623").set<MCD_stroke>("#C97E1C").set<MCD_color>("#fff");
+
+    class_def& decision_class = _graph.new_object<class_def>();
+    decision_class.set<OP_name>("Decision").set<MCD_fill>("#7ED321").set<MCD_stroke>("#5FA319").set<MCD_color>("#fff");
+
+    class_def& end_class = _graph.new_object<class_def>();
+    end_class.set<OP_name>("End").set<MCD_fill>("#D0021B").set<MCD_stroke>("#A00115").set<MCD_color>("#fff");
 
     // Create nodes
     node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle);
+    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Start");
 
     node& process = _graph.new_object<node>();
-    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle);
+    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Process");
 
     node& decision = _graph.new_object<node>();
-    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond);
+    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond).set<NP_class_def>("Decision");
 
     node& end = _graph.new_object<node>();
-    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle);
+    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("End");
 
     // Create links
     link& link1 = _graph.new_object<link>();

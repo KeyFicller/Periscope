@@ -48,4 +48,14 @@ struct NP_shape : base_property<enum_type, node>
 // NP_subgraph is property for node subgraph
 struct NP_subgraph_node : base_property<std::vector<std::shared_ptr<base_handle>>, node>
 {};
+
+// NP_class_def is property for node class definition
+struct NP_class_def : base_property<std::string, node>
+{
+    // to_string is to convert property to string representation
+    static std::string to_string(const NP_class_def& _property, graph_type _graph_type = io().GraphType)
+    {
+        return _property.Value;
+    }
+};
 } // namespace periscope
