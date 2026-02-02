@@ -148,3 +148,52 @@ participant 0x16fb52d58 as Database
 0x16fb52d58 ->> 0x16fb52d88 : Result
 0x16fb52d88 ->> 0x16fb52dc8 : Response
 ```
+
+## Example 3: Take snapshots to illustrate active test switching.
+
+```mermaid
+flowchart TD
+
+classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+1@{ shape: rect, label: Texture Test }
+class 1 ActTypeClass
+```
+
+--------------- Next graph -----------------
+```mermaid
+flowchart TD
+
+classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+1@{ shape: rect, label: Texture Test }
+2@{ shape: rect, label: Blender Test Scene }
+1 --> 2
+class 2 ActTypeClass
+```
+
+--------------- Next graph -----------------
+```mermaid
+flowchart TD
+
+classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+1@{ shape: rect, label: Texture Test }
+2@{ shape: rect, label: Blender Test Scene }
+4@{ shape: rect, label: Advanced GLSL }
+1 --> 2
+2 --> 4
+class 4 ActTypeClass
+```
+
+--------------- Next graph -----------------
+```mermaid
+flowchart TD
+
+classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+1@{ shape: rect, label: Texture Test }
+2@{ shape: rect, label: Blender Test Scene }
+4@{ shape: rect, label: Advanced GLSL }
+6@{ shape: rect, label: Spline Movement }
+1 --> 2
+2 --> 4
+4 --> 6
+class 6 ActTypeClass
+```
