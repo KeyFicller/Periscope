@@ -13,3 +13,5 @@
 #include "misc/periscope_note_properties.h"
 #include "node/periscope_node.h"
 #include "node/periscope_node_properties.h"
+#include "tools/periscope_guard.h"
+#include "tools/periscope_nested_map_op.h"
