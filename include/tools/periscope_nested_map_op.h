@@ -155,53 +155,65 @@ struct is_key_sequence_applicable_impl<
 {};
 
 template<typename NestedMap, typename Key>
-std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>
-view_impl(NestedMap& nestMap, const Key& key)
+void
+view_impl(NestedMap& nestMap,
+          std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>& result,
+          const Key& key)
 {
     auto iter = nestMap.find(key);
     if (iter == nestMap.end()) {
-        return std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>{};
+        return;
     }
-    return std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>{ &iter->second };
+    result.push_back(&iter->second);
 }
 
 template<typename NestedMap, typename Key>
-std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>
-view_impl(NestedMap& nestMap, const key_adapter<Key>& adapter)
+void
+view_impl(NestedMap& nestMap,
+          std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type>& result,
+          const key_adapter<Key>& adapter)
 {
-    std::vector<typename nested_map_op_traits<NestedMap, Key>::value_pointer_type> result;
     for (auto& iter : nestMap) {
         if (adapter(iter.first)) {
             result.push_back(&iter.second);
         }
     }
-    return result;
 }
 
-template<typename NestedMap, typename CurrentKey, typename... SubsequentKeys>
-std::vector<typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type>
-view_impl(NestedMap& nestMap, const CurrentKey& currentKey, const SubsequentKeys&... subsequentKeys)
+template<typename NestedMap,
+         typename CurrentKey,
+         typename... SubsequentKeys,
+         typename = std::enable_if_t<(sizeof...(SubsequentKeys) > 0)>>
+void
+view_impl(
+  NestedMap& nestMap,
+  std::vector<typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type>& result,
+  const CurrentKey& currentKey,
+  const SubsequentKeys&... subsequentKeys)
 {
     auto iter = nestMap.find(currentKey);
     if (iter == nestMap.end()) {
-        return std::vector<
-          typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type>{};
+        return;
     }
-    return view_impl(iter->second, subsequentKeys...);
+    view_impl(iter->second, result, subsequentKeys...);
 }
 
-template<typename NestedMap, typename CurrentKey, typename... SubsequentKeys>
-std::vector<typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type>
-view_impl(NestedMap& nestMap, const key_adapter<CurrentKey>& adapter, const SubsequentKeys&... subsequentKeys)
+template<typename NestedMap,
+         typename CurrentKey,
+         typename... SubsequentKeys,
+         typename = std::enable_if_t<(sizeof...(SubsequentKeys) > 0)>>
+void
+view_impl(
+  NestedMap& nestMap,
+  std::vector<typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type>& result,
+  const key_adapter<CurrentKey>& adapter,
+  const SubsequentKeys&... subsequentKeys)
 {
-    std::vector<typename nested_map_op_traits<NestedMap, CurrentKey, SubsequentKeys...>::value_pointer_type> result;
     for (auto& iter : nestMap) {
         if (adapter(iter.first)) {
-            auto subResult = view_impl(iter.second, subsequentKeys...);
-            result.insert(result.end(), subResult.begin(), subResult.end());
+            view_impl(iter.second, result, subsequentKeys...);
         }
     }
-    return result;
 }
 
 template<typename NestedMap, typename Key>
@@ -281,7 +293,9 @@ view(NestedMap& nestMap, const Keys&... keys)
 {
     static_assert(internal::is_key_sequence_applicable_v<NestedMap, Keys...>,
                   "KeySequence not applicable for NMap_Op::view");
-    return internal::view_impl(nestMap, keys...);
+    std::vector<typename internal::nested_map_op_traits<NestedMap, Keys...>::value_pointer_type> result;
+    internal::view_impl(nestMap, result, keys...);
+    return result;
 }
 
 template<typename NestedMap, typename... Keys>
