@@ -126,11 +126,29 @@ example2_sequence()
     Service::print_graph();
 }
 
+void
+example3_gantt()
+{
+    graph<int> _graph;
+    _graph.template set<GP_type>(graph_type::k_gantt)
+      .template set<GP_output_format>(graph_output_format::k_markdown)
+      .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+
+    // Create nodes
+    node& start = _graph.new_object<node>();
+    start.set<OP_name>("Start").set<NP_time_tick_start>("0:0"_tick).set<NP_time_tick_end>("1:0"_tick);
+
+    std::cout << "=== Example 3: Gantt Chart ===\n";
+    std::cout << _graph.to_string() << std::endl;
+}
+
 int
 main()
 {
     example1_flowchart();
     std::cout << "\n";
     example2_sequence();
+    std::cout << "\n";
+    example3_gantt();
     return 0;
 }

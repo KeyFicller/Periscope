@@ -3,6 +3,8 @@
 #include "graph/periscope_graph_fwd.h"
 #include "object/periscope_handle.h"
 #include "object/periscope_object_properties.h"
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace periscope {
@@ -57,5 +59,45 @@ struct NP_class_def : base_property<std::string, node>
     {
         return _property.Value;
     }
+};
+
+// NP_time_tick is property for node time tick
+
+// It's meaning depends on the graph type
+struct data_tick
+{
+    int first;
+    int second;
+};
+
+inline data_tick
+operator""_tick(const char* _str, std::size_t _len)
+{
+    // Split by :
+    std::string_view str_view(_str, _len);
+    auto pos = str_view.find(':');
+    if (pos == std::string_view::npos) {
+        throw std::runtime_error("Invalid time tick format");
+    }
+    return data_tick{ std::stoi(std::string(_str, 0, pos)), std::stoi(std::string(_str, pos + 1, _len - pos - 1)) };
+}
+
+struct NP_time_tick : base_property<data_tick, node>
+{
+    // to_string is to convert property to string representation
+    static std::string to_string(const NP_time_tick& _property, graph_type _graph_type = io().GraphType)
+    {
+        return std::format("{}:{}", _property.Value.first, _property.Value.second);
+    }
+};
+
+struct NP_time_tick_start : public NP_time_tick
+{
+    using NP_time_tick::NP_time_tick;
+};
+
+struct NP_time_tick_end : public NP_time_tick
+{
+    using NP_time_tick::NP_time_tick;
 };
 } // namespace periscope

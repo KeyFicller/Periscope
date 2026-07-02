@@ -43,6 +43,12 @@ class node : public object<node>
                 std::string label_str = get<OP_name>().Value;
                 return std::format("participant {} as {}", handle_str, label_str);
             }
+            case graph_type::k_gantt: {
+                std::string label_str = get<OP_name>().Value;
+                std::string start_tick_str = _V_str<NP_time_tick_start>();
+                std::string end_tick_str = _V_str<NP_time_tick_end>();
+                return std::format("    {} : {}, {}", label_str, start_tick_str, end_tick_str);
+            }
             default:
                 throw std::runtime_error("Unsupported graph type");
         }

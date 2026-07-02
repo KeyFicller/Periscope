@@ -8,6 +8,7 @@ enum class graph_type
 {
     k_flowchart,
     k_sequence,
+    k_gantt
 };
 
 // graph_output_format is enum for graph output formats

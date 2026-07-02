@@ -87,13 +87,29 @@ class graph : public object<graph<underlying_type>>
 
         // Graph info
         str += this->template _V_str<GP_type<underlying_type>>();
-        str += " ";
-        str += this->template _V_str<GP_flowchart_direction<underlying_type>>();
+        {
+            std::string direction_str =
+              this->template _V_str<GP_flowchart_direction<underlying_type>>();
+            if (!direction_str.empty()) {
+                str += " ";
+                str += direction_str;
+            }
+        }
         str += "\n";
 
         // Configuration info
-        str += this->template _V_str<GP_sequence_show_number<underlying_type>>();
-        str += "\n";
+        switch (io().GraphType) {
+            case graph_type::k_sequence:
+                str += this->template _V_str<GP_sequence_show_number<underlying_type>>();
+                str += "\n";
+                break;
+            case graph_type::k_gantt:
+                str += std::format("    {}\n",
+                                   this->template _V_str<GP_date_format<underlying_type>>());
+                break;
+            default:
+                break;
+        }
 
         // Forward declare class definitions
         traverser<class_def>::traverse(

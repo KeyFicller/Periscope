@@ -42,6 +42,8 @@ struct GP_type : base_property<graph_type, graph<underlying_type>>
                 return "flowchart";
             case graph_type::k_sequence:
                 return "sequenceDiagram";
+            case graph_type::k_gantt:
+                return "gantt";
             default:
                 return "";
         }
@@ -81,6 +83,40 @@ struct GP_flowchart_direction : base_property<enum_type, graph<underlying_type>>
             default:
                 throw std::runtime_error("Unsupported flowchart direction");
         }
+    }
+};
+
+// GP_dateFormat is property for gantt chart date format
+template<typename underlying_type>
+struct GP_date_format : base_property<enum_type, graph<underlying_type>>
+{
+    enum date_format : enum_type
+    {
+        k_month_day,
+        k_hour_minute
+    };
+
+    static std::string to_string(const GP_date_format& _property, graph_type _graph_type = io().GraphType)
+    {
+        if (_graph_type != graph_type::k_gantt)
+            return "";
+        switch (_property.Value) {
+            case date_format::k_month_day:
+                return "dateFormat MM-DD";
+            case date_format::k_hour_minute:
+                return "dateFormat HH:mm";
+            default:
+                return "";
+        }
+    }
+
+    static std::string to_string_default(graph_type _graph_type = io().GraphType)
+    {
+        if (_graph_type != graph_type::k_gantt)
+            return "";
+        static GP_date_format<underlying_type> default_date_format_property;
+        default_date_format_property.Value = GP_date_format<underlying_type>::date_format::k_hour_minute;
+        return to_string(default_date_format_property, _graph_type);
     }
 };
 }
