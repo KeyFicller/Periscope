@@ -6,6 +6,7 @@
 #include "type_hash/periscope_type_hash.h"
 
 #include <any>
+#include <memory>
 #include <map>
 
 namespace periscope {
@@ -16,43 +17,35 @@ class base_object
 {
   private:
     // remove_child_properties_helper is helper to remove child properties from type_list
+    // Partial specializations only (no in-class template<>): empty packs are no-ops via if constexpr.
     template<typename child_list>
     struct remove_child_properties_helper;
 
-    // remove_child_properties_helper is specialization for non-empty type_list
     template<typename... child_props>
     struct remove_child_properties_helper<type_list<child_props...>>
     {
-        static void apply(base_object* self) { (self->template remove<child_props>(), ...); }
-    };
-
-    // remove_child_properties_helper is specialization for empty type_list
-    template<>
-    struct remove_child_properties_helper<type_list<>>
-    {
-        static void apply(base_object* self) {}
+        static void apply(base_object* self)
+        {
+            if constexpr (sizeof...(child_props) > 0) {
+                (self->template remove<child_props>(), ...);
+            }
+        }
     };
 
     // check_parent_properties_helper is helper to check parent properties from type_list
     template<typename parent_list>
     struct check_parent_properties_helper;
 
-    // check_parent_properties_helper is specialization for non-empty type_list
     template<typename... parent_props>
     struct check_parent_properties_helper<type_list<parent_props...>>
     {
         static void apply(const base_object* self)
         {
-            if ((self->template has<parent_props>() && ...) == false)
-                throw std::runtime_error("Parent property doesn't exist");
+            if constexpr (sizeof...(parent_props) > 0) {
+                if ((self->template has<parent_props>() && ...) == false)
+                    throw std::runtime_error("Parent property doesn't exist");
+            }
         }
-    };
-
-    // check_parent_properties_helper is specialization for empty type_list
-    template<>
-    struct check_parent_properties_helper<type_list<>>
-    {
-        static void apply(const base_object* self) {}
     };
 
     // on_property_removed is callback when property is removed

@@ -3,6 +3,8 @@
 #include "object/periscope_handle.h"
 #include "object/periscope_object_properties.h"
 
+#include <vector>
+
 namespace periscope {
 // note is a class for notes
 class note;

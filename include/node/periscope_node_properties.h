@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "object/periscope_handle.h"
 #include "object/periscope_object_properties.h"
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
