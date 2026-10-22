@@ -1,6 +1,6 @@
 # Periscope
 
-A C++ template library for generating Mermaid diagrams, supporting flowcharts and sequence diagrams.
+A C++ template library for generating Mermaid diagrams, supporting flowcharts, sequence diagrams, and gantt charts.
 
 ## Build and use
 
@@ -12,9 +12,10 @@ cmake --build build
 ./build/bin/PERISCOPE_SANDBOX   # optional demo (PERISCOPE_BUILD_SANDBOX=ON by default)
 ```
 
-From another CMake project (add this repo with `add_subdirectory`, `FetchContent`, or an install + `find_package` once packaged):
+From another CMake project (`add_subdirectory`, `FetchContent`, or after `cmake --install` + `find_package(Periscope)`):
 
 ```cmake
+find_package(Periscope REQUIRED)  # or: add_subdirectory / FetchContent
 target_link_libraries(your_target PRIVATE Periscope::periscope)
 ```
 
@@ -168,7 +169,41 @@ participant 0x16fb52d58 as Database
 0x16fb52d88 ->> 0x16fb52dc8 : Response
 ```
 
-## Example 3: Take snapshots to illustrate active test switching.
+## Example 3: Gantt Chart (using int as handle)
+
+Create a gantt chart with time-tick start/end on each task node:
+
+```cpp
+#include "periscope.h"
+#include <iostream>
+
+int main() {
+    using namespace periscope;
+
+    graph<int> _graph;
+    _graph.template set<GP_type>(graph_type::k_gantt)
+          .template set<GP_output_format>(graph_output_format::k_markdown)
+          .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+
+    node& start = _graph.new_object<node>();
+    start.set<OP_name>("Start")
+         .set<NP_time_tick_start>("0:0"_tick)
+         .set<NP_time_tick_end>("1:0"_tick);
+
+    std::cout << _graph.to_string() << std::endl;
+    return 0;
+}
+```
+
+**Output:**
+
+```mermaid
+gantt
+    dateFormat HH:mm
+    Start : 0:0, 1:0
+```
+
+## Example 4: Take snapshots to illustrate active test switching.
 
 ```mermaid
 flowchart TD
