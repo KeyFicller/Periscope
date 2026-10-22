@@ -23,11 +23,29 @@ target_include_directories(periscope INTERFACE
 target_compile_features(periscope INTERFACE cxx_std_20)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 install(TARGETS periscope EXPORT PeriscopeTargets)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT PeriscopeTargets
     FILE PeriscopeTargets.cmake
     NAMESPACE Periscope::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Periscope
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PeriscopeConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/PeriscopeConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Periscope
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/PeriscopeConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/PeriscopeConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/PeriscopeConfigVersion.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Periscope
 )
 
