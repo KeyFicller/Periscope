@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "object/periscope_handle.h"
 #include "object/periscope_object_properties.h"
+#include <format>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -85,7 +86,8 @@ operator""_tick(const char* _str, std::size_t _len)
 
 struct NP_time_tick : base_property<data_tick, node>
 {
-    // to_string is to convert property to string representation
+    // to_string is a raw tick dump; gantt Mermaid padding is done in graph::to_string_impl
+    // via GP_date_format::format_tick (io() only holds graph-universal state).
     static std::string to_string(const NP_time_tick& _property, graph_type _graph_type = io().GraphType)
     {
         return std::format("{}:{}", _property.Value.first, _property.Value.second);

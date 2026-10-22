@@ -115,8 +115,28 @@ class graph : public object<graph<underlying_type>>
         traverser<class_def>::traverse(
           *this, [&str](class_def& class_def) { str += std::format("{}\n", class_def.to_string()); });
 
-        // Draw nodes
-        traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
+        // Draw nodes (gantt: format ticks from this graph's GP_date_format, not io())
+        if (io().GraphType == graph_type::k_gantt) {
+            enum_type date_fmt = GP_date_format<underlying_type>::date_format::k_hour_minute;
+            if (this->template has<GP_date_format<underlying_type>>())
+                date_fmt = this->template get<GP_date_format<underlying_type>>().Value;
+            traverser<node>::traverse(*this, [&str, date_fmt](node& n) {
+                std::string label_str = n.template get<OP_name>().Value;
+                std::string start_tick_str;
+                std::string end_tick_str;
+                if (n.has<NP_time_tick_start>()) {
+                    const auto& t = n.get<NP_time_tick_start>().Value;
+                    start_tick_str = GP_date_format<underlying_type>::format_tick(t.first, t.second, date_fmt);
+                }
+                if (n.has<NP_time_tick_end>()) {
+                    const auto& t = n.get<NP_time_tick_end>().Value;
+                    end_tick_str = GP_date_format<underlying_type>::format_tick(t.first, t.second, date_fmt);
+                }
+                str += std::format("    {} : {}, {}\n", label_str, start_tick_str, end_tick_str);
+            });
+        } else {
+            traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
+        }
 
         // Draw links and notes
         traverser<type_list<link, note>>::traverse(
