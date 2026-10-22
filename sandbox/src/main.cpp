@@ -8,7 +8,7 @@ using namespace periscope;
 void
 example1_flowchart()
 {
-    graph<int> _graph;
+    graph _graph;
     _graph.set<OP_name>("Hello");
 
     // Create class definitions
@@ -24,36 +24,26 @@ example1_flowchart()
     class_def& end_class = _graph.new_object<class_def>();
     end_class.set<OP_name>("End").set<MCD_fill>("#D0021B").set<MCD_stroke>("#A00115").set<MCD_color>("#fff");
 
-    // Create nodes
+    // Create nodes: the property is deduced from the nested enum type
     node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Start");
+    start.set<OP_name>("Start").set(NP_shape::k_rectangle).set<NP_class_def>("Start");
 
     node& process = _graph.new_object<node>();
-    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Process");
+    process.set<OP_name>("Process Data").set(NP_shape::k_rectangle).set<NP_class_def>("Process");
 
     node& decision = _graph.new_object<node>();
-    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond).set<NP_class_def>("Decision");
+    decision.set<OP_name>("Decision").set(NP_shape::k_diamond).set<NP_class_def>("Decision");
 
     node& end = _graph.new_object<node>();
-    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("End");
+    end.set<OP_name>("End").set(NP_shape::k_rectangle).set<NP_class_def>("End");
 
-    // Create links
-    link& link1 = _graph.new_object<link>();
-    link1.set<LP_source>(start).set<LP_target>(process).set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-
-    link& link2 = _graph.new_object<link>();
-    link2.set<LP_source>(process).set<LP_target>(decision).set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-
-    link& link3 = _graph.new_object<link>();
-    link3.set<LP_source>(decision)
-      .set<LP_target>(end)
-      .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)
-      .set<OP_name>("Yes");
+    // Create links: every node knows its graph, so `>>` creates the link in place
+    start >> process >> decision >> "Yes" >> end;
 
     // Configure graph
-    _graph.template set<GP_type>(graph_type::k_flowchart)
-      .template set<GP_output_format>(graph_output_format::k_markdown)
-      .template set<GP_flowchart_direction>(GP_flowchart_direction<int>::k_top_to_down);
+    _graph.set<GP_type>(graph_type::k_flowchart)
+      .set<GP_output_format>(graph_output_format::k_markdown)
+      .set(GP_flowchart_direction<>::k_top_to_down);
 
     std::cout << "=== Example 1: Flowchart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -92,10 +82,8 @@ class Service
             registered[target] = true;
         }
 
-        link& req = hook_graph.new_object<link>();
-        auto src_handle = hook_graph.access<node>(this_handle).get_handle();
-        auto dst_handle = hook_graph.access<node>(target_handle).get_handle();
-        req.set<LP_source>(src_handle).set<LP_target>(dst_handle).set<OP_name>(msg);
+        // A sequence message is the same `>>` edge; the label becomes the message text
+        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
     }
 
     static void print_graph()
@@ -129,10 +117,10 @@ example2_sequence()
 void
 example3_gantt()
 {
-    graph<int> _graph;
-    _graph.template set<GP_type>(graph_type::k_gantt)
-      .template set<GP_output_format>(graph_output_format::k_markdown)
-      .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+    graph _graph;
+    _graph.set<GP_type>(graph_type::k_gantt)
+      .set<GP_output_format>(graph_output_format::k_markdown)
+      .set(GP_date_format<>::k_hour_minute);
 
     // Three tasks; ticks print zero-padded HH:mm to match dateFormat
     node& design = _graph.new_object<node>();

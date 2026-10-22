@@ -16,6 +16,7 @@ struct MNP_orient : public base_property<enum_type, note>
         k_left,
         k_right
     };
+    friend MNP_orient periscope_property_of(orient) { return {}; }
 
     // to_string is to convert property to string representation
     static std::string to_string(const MNP_orient& _property, graph_type _graph_type = io().GraphType)

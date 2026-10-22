@@ -23,6 +23,7 @@ struct NP_shape : base_property<enum_type, node>
         k_diamond,
         k_parallelogram,
     };
+    friend NP_shape periscope_property_of(shape) { return {}; }
 
     // to_string is to convert property to string representation
     static std::string to_string(const NP_shape& _property, graph_type _graph_type = io().GraphType)

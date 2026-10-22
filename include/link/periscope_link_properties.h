@@ -32,6 +32,13 @@ struct LP_style : public base_property<enum_type, link>
 
         k_arrow_mask = 0x100000,
     };
+    friend LP_style periscope_property_of(style) { return {}; }
+
+    // operator| keeps composed styles typed, so `k_dashed | k_arrow_mask` still deduces LP_style
+    friend constexpr style operator|(style _lhs, style _rhs)
+    {
+        return static_cast<style>(static_cast<enum_type>(_lhs) | static_cast<enum_type>(_rhs));
+    }
 
     // to_string is to convert property to string representation
     static std::string to_string(const LP_style& _property, graph_type _graph_type = io().GraphType)

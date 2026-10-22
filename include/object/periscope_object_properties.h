@@ -45,6 +45,14 @@ extract_handle(const t& _value)
     }
 };
 
+// property_of_t maps a nested property enum to its owning property via ADL:
+// a property declares hidden friend `friend prop periscope_property_of(enum_name) { return {}; }`
+template<typename e>
+concept property_enum = std::is_enum_v<e> && requires(e _value) { periscope_property_of(_value); };
+
+template<typename e>
+using property_of_t = decltype(periscope_property_of(std::declval<e>()));
+
 // base_property is base class for all properties
 template<typename value_type, typename owner>
 struct base_property

@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "graph/periscope_graph_properties.h"
 #include "link/periscope_link.h"
+#include "link/periscope_link_operators.h"
 #include "misc/periscope_class_def.h"
 #include "misc/periscope_note.h"
 #include "node/periscope_node.h"
@@ -20,7 +21,9 @@ namespace periscope {
 
 // graph is container for nodes and links with graph type management
 template<typename underlying_type>
-class graph : public object<graph<underlying_type>>
+class graph
+  : public object<graph<underlying_type>>
+  , public link_owner
 {
   public:
     graph()
@@ -51,6 +54,26 @@ class graph : public object<graph<underlying_type>>
         this->template get_or_create<prop<underlying_type>>().Value = _value;
         return *this;
     }
+
+    // set overload: deduce a graph property from its nested enum, e.g. set(GP_date_format<>::k_hour_minute)
+    template<typename e>
+        requires property_enum<e> && is_graph_property_tag<property_of_t<e>>::value
+    graph& set(e _value)
+    {
+        return set_from_tag(property_of_t<e>{}, static_cast<enum_type>(_value));
+    }
+
+    // create_link is implementation of link_owner::create_link
+    link& create_link() override { return new_object<link>(); }
+
+  private:
+    template<template<typename> class prop>
+    graph& set_from_tag(graph_property_tag<prop>, enum_type _value)
+    {
+        return set<prop>(_value);
+    }
+
+  public:
 
   public:
     // to_string_impl is implementation of object::to_string_impl
@@ -189,6 +212,7 @@ class graph : public object<graph<underlying_type>>
         t& ref = *ptr;
         m_elements.push_back(std::move(ptr));
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
+        ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
         return ref;
     }
@@ -225,6 +249,7 @@ class graph : public object<graph<underlying_type>>
         m_elements.push_back(std::move(ptr));
         m_handle_manager.allocate_at(_handle);
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
+        ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
         return ref;
     }
