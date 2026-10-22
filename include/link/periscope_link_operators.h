@@ -141,10 +141,15 @@ operator>>(pending_link _pending, activate _activate)
     return _pending;
 }
 
+// link_decoration lists what may sit between two nodes in a `>>` chain
+template<typename t>
+concept link_decoration = std::is_same_v<t, LP_style::style> || std::is_same_v<t, label> ||
+                          std::is_same_v<t, activate> || std::is_convertible_v<t, const char*>;
+
 // ---- starting a pending edge from a node or from the end of a chain ----
 
 template<typename decoration>
-    requires requires(pending_link _p, decoration _d) { _p >> _d; }
+    requires link_decoration<decoration>
 pending_link
 operator>>(node& _source, decoration _decoration)
 {
@@ -152,7 +157,7 @@ operator>>(node& _source, decoration _decoration)
 }
 
 template<typename decoration>
-    requires requires(pending_link _p, decoration _d) { _p >> _d; }
+    requires link_decoration<decoration>
 pending_link
 operator>>(const link_ref& _chain, decoration _decoration)
 {
