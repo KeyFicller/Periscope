@@ -18,19 +18,10 @@ enum class graph_output_format
     k_markdown,
 };
 
-// gantt_date_format is Mermaid gantt dateFormat; shared by GP_date_format and tick rendering
-enum class gantt_date_format
-{
-    k_month_day,   // MM-DD
-    k_hour_minute, // HH:mm
-};
-
-// graph_io_context is context for graph io (active while to_string runs)
+// graph_io_context is context for graph io
 struct graph_io_context
 {
-    graph_type GraphType{};
-    // Active gantt dateFormat so NP_time_tick can match Mermaid zero-padded output
-    gantt_date_format DateFormat = gantt_date_format::k_hour_minute;
+    graph_type GraphType;
 };
 
 // io is to get graph io context
