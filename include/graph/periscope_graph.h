@@ -36,6 +36,13 @@ class graph : public object<graph<underlying_type>>
         if (!this->template has<GP_type<underlying_type>>())
             throw std::runtime_error("Graph type not set, please set it before calling to_string");
         io().GraphType = this->template get<GP_type<underlying_type>>().Value;
+        // Publish active gantt dateFormat so NP_time_tick matches Mermaid (HH:mm / MM-DD)
+        if (io().GraphType == graph_type::k_gantt) {
+            if (this->template has<GP_date_format<underlying_type>>())
+                io().DateFormat = this->template get<GP_date_format<underlying_type>>().Value;
+            else
+                io().DateFormat = gantt_date_format::k_hour_minute;
+        }
         return object<graph<underlying_type>>::to_string();
     }
 

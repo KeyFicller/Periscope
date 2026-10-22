@@ -171,7 +171,8 @@ participant 0x16fb52d58 as Database
 
 ## Example 3: Gantt Chart (using int as handle)
 
-Create a gantt chart with time-tick start/end on each task node:
+Create a gantt chart with time-tick start/end on each task node. Ticks are
+formatted to match `GP_date_format` (zero-padded `HH:mm` or `MM-DD`):
 
 ```cpp
 #include "periscope.h"
@@ -185,10 +186,20 @@ int main() {
           .template set<GP_output_format>(graph_output_format::k_markdown)
           .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
 
-    node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start")
-         .set<NP_time_tick_start>("0:0"_tick)
-         .set<NP_time_tick_end>("1:0"_tick);
+    node& design = _graph.new_object<node>();
+    design.set<OP_name>("Design")
+          .set<NP_time_tick_start>("9:0"_tick)
+          .set<NP_time_tick_end>("12:0"_tick);
+
+    node& build = _graph.new_object<node>();
+    build.set<OP_name>("Build")
+         .set<NP_time_tick_start>("12:0"_tick)
+         .set<NP_time_tick_end>("15:30"_tick);
+
+    node& test = _graph.new_object<node>();
+    test.set<OP_name>("Test")
+        .set<NP_time_tick_start>("15:30"_tick)
+        .set<NP_time_tick_end>("17:0"_tick);
 
     std::cout << _graph.to_string() << std::endl;
     return 0;
@@ -200,7 +211,9 @@ int main() {
 ```mermaid
 gantt
     dateFormat HH:mm
-    Start : 0:0, 1:0
+    Design : 09:00, 12:00
+    Build : 12:00, 15:30
+    Test : 15:30, 17:00
 ```
 
 ## Example 4: Take snapshots to illustrate active test switching.

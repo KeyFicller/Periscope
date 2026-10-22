@@ -134,9 +134,21 @@ example3_gantt()
       .template set<GP_output_format>(graph_output_format::k_markdown)
       .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
 
-    // Create nodes
-    node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_time_tick_start>("0:0"_tick).set<NP_time_tick_end>("1:0"_tick);
+    // Three tasks; ticks print zero-padded HH:mm to match dateFormat
+    node& design = _graph.new_object<node>();
+    design.set<OP_name>("Design")
+      .set<NP_time_tick_start>("9:0"_tick)
+      .set<NP_time_tick_end>("12:0"_tick);
+
+    node& build = _graph.new_object<node>();
+    build.set<OP_name>("Build")
+      .set<NP_time_tick_start>("12:0"_tick)
+      .set<NP_time_tick_end>("15:30"_tick);
+
+    node& test = _graph.new_object<node>();
+    test.set<OP_name>("Test")
+      .set<NP_time_tick_start>("15:30"_tick)
+      .set<NP_time_tick_end>("17:0"_tick);
 
     std::cout << "=== Example 3: Gantt Chart ===\n";
     std::cout << _graph.to_string() << std::endl;

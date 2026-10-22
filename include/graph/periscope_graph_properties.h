@@ -86,24 +86,22 @@ struct GP_flowchart_direction : base_property<enum_type, graph<underlying_type>>
     }
 };
 
-// GP_dateFormat is property for gantt chart date format
+// GP_date_format is property for gantt chart Mermaid dateFormat
 template<typename underlying_type>
-struct GP_date_format : base_property<enum_type, graph<underlying_type>>
+struct GP_date_format : base_property<gantt_date_format, graph<underlying_type>>
 {
-    enum date_format : enum_type
-    {
-        k_month_day,
-        k_hour_minute
-    };
+    // Aliases keep GP_date_format<T>::k_hour_minute call sites working
+    static constexpr gantt_date_format k_month_day = gantt_date_format::k_month_day;
+    static constexpr gantt_date_format k_hour_minute = gantt_date_format::k_hour_minute;
 
     static std::string to_string(const GP_date_format& _property, graph_type _graph_type = io().GraphType)
     {
         if (_graph_type != graph_type::k_gantt)
             return "";
         switch (_property.Value) {
-            case date_format::k_month_day:
+            case gantt_date_format::k_month_day:
                 return "dateFormat MM-DD";
-            case date_format::k_hour_minute:
+            case gantt_date_format::k_hour_minute:
                 return "dateFormat HH:mm";
             default:
                 return "";
@@ -115,7 +113,7 @@ struct GP_date_format : base_property<enum_type, graph<underlying_type>>
         if (_graph_type != graph_type::k_gantt)
             return "";
         static GP_date_format<underlying_type> default_date_format_property;
-        default_date_format_property.Value = GP_date_format<underlying_type>::date_format::k_hour_minute;
+        default_date_format_property.Value = gantt_date_format::k_hour_minute;
         return to_string(default_date_format_property, _graph_type);
     }
 };
