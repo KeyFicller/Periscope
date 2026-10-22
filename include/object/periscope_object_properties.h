@@ -4,6 +4,7 @@
 #include "object/periscope_handle.h"
 #include "type_hash/periscope_type_hash.h"
 #include "type_traits/periscope_type_list.h"
+#include <memory>
 #include <string>
 #include <type_traits>
 

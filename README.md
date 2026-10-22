@@ -2,6 +2,25 @@
 
 A C++ template library for generating Mermaid diagrams, supporting flowcharts and sequence diagrams.
 
+## Build and use
+
+Periscope is a header-only CMake `INTERFACE` library. From this repo:
+
+```bash
+cmake -S . -B build
+cmake --build build
+./build/bin/PERISCOPE_SANDBOX   # optional demo (PERISCOPE_BUILD_SANDBOX=ON by default)
+```
+
+From another CMake project (add this repo with `add_subdirectory`, `FetchContent`, or an install + `find_package` once packaged):
+
+```cmake
+target_link_libraries(your_target PRIVATE Periscope::periscope)
+```
+
+Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `include/` path and requires C++20.
+
+
 ## Example 1: Flowchart (using int as handle)
 
 Create a flowchart directly using the API with `int` as the handle type:
