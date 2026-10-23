@@ -47,6 +47,8 @@ int main() {
     // Edges are one-shot: write the full `a >> props >> b` expression (no named/deferred edge).
     // Chains must end on a target node — `a >> props` (no destination) is incomplete
     // (pending_link is [[nodiscard]]; discarding it aborts rather than silently no-op).
+    // Each owning property appears at most once per chain (duplicate OP_name / LP_style /
+    // LP_activate is a compile error — no silent overwrite at connect).
     start >> process >> decision >> "Yes"_op_name >> end;
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 

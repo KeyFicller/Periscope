@@ -3,6 +3,7 @@
 #include "link/periscope_link.h"
 #include "link/periscope_link_properties.h"
 #include "node/periscope_node.h"
+#include "type_traits/periscope_type_list.h"
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -49,6 +50,38 @@ struct normalize_link_decoration<label>
     static type apply(label&& _label) { return property_literal<OP_name>{ std::move(_label.Value) }; }
     static type apply(const label& _label) { return property_literal<OP_name>{ _label.Value }; }
 };
+// Owning property key for a >> decoration (after or before normalize).
+// Uniqueness is by property (OP_name / LP_style / LP_activate), not by value type:
+// "Yes"_op_name and label{} both key as OP_name; two LP_style::* collide.
+template<typename deco>
+struct link_decoration_property;
+
+template<typename prop>
+struct link_decoration_property<property_literal<prop>>
+{
+    using type = prop;
+};
+
+template<typename e>
+    requires property_enum<e>
+struct link_decoration_property<e>
+{
+    using type = property_of_t<e>;
+};
+
+template<>
+struct link_decoration_property<label>
+{
+    using type = OP_name;
+};
+
+template<typename deco>
+using link_decoration_property_t = typename link_decoration_property<std::remove_cvref_t<deco>>::type;
+
+// True when deco's owning property is not already in the typed pack.
+template<typename deco, typename... decorations>
+inline constexpr bool link_decoration_property_unique_v =
+  !type_list_contains_v<type_list<link_decoration_property_t<decorations>...>, link_decoration_property_t<deco>>;
 } // namespace detail
 
 // pending_link is a typed incomplete edge used only as a temporary in a one-shot `>>` chain
@@ -198,6 +231,7 @@ concept link_property_literal =
 // props): literals use "..."_op_name; runtime names use label{} or set<OP_name>.
 // Edges are one-shot rvalue chains; a chain that stops on a decoration (no target) yields a
 // discarded pending_link and fails: [[nodiscard]] at compile time, abort if forced through (void).
+// Each owning property may appear at most once in a chain (see operator>> static_assert).
 template<typename t>
 concept link_decoration =
   link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label>;
@@ -209,6 +243,13 @@ template<typename... decorations, typename deco>
 auto
 operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
+    // Reject duplicate owning properties at the append site (clear message vs. silent overwrite
+    // at connect/set). Keys by property type: OP_name / LP_style / LP_activate — so
+    // "Yes"_op_name + label{}, or two LP_style::*, fail here.
+    static_assert(detail::link_decoration_property_unique_v<deco, decorations...>,
+                  "periscope: duplicate property in >> chain — each of OP_name / LP_style / "
+                  "LP_activate may appear at most once (e.g. not two styles, not "
+                  "\"Yes\"_op_name together with label{})");
     using normalized = typename detail::normalize_link_decoration<deco>::type;
     node* source = _pending.Source;
     auto pack = std::move(_pending.Decorations);
