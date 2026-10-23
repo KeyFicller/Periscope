@@ -41,7 +41,9 @@ int main() {
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
 
-    // operator>> creates links; labels / composed styles sit between nodes
+    // operator>> creates links; labels / composed styles sit between nodes.
+    // Chains must end on a target node — `a >> props` (no destination) is incomplete
+    // (pending_link is [[nodiscard]]; discarding it aborts rather than silently no-op).
     start >> process >> decision >> "Yes"_op_name >> end;
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 

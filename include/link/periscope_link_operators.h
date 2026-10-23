@@ -3,6 +3,9 @@
 #include "link/periscope_link.h"
 #include "link/periscope_link_properties.h"
 #include "node/periscope_node.h"
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <stdexcept>
 #include <string>
@@ -32,10 +35,44 @@ struct label
 
 // pending_link is an edge whose source is known and whose target is still missing.
 // Decorations are type-erased setters applied to the created link (any deduced link property).
-struct pending_link
+// Incomplete chains (no destination node) must not be discarded: [[nodiscard]] + consume-on-connect.
+struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b)")]] pending_link
 {
     node* Source = nullptr;
     std::vector<std::function<void(link&)>> Decorations;
+
+    pending_link() = default;
+    pending_link(pending_link&& other) noexcept
+      : Source(std::exchange(other.Source, nullptr))
+      , Decorations(std::move(other.Decorations))
+    {
+    }
+    pending_link& operator=(pending_link&& other) noexcept
+    {
+        if (this != &other) {
+            Source = std::exchange(other.Source, nullptr);
+            Decorations = std::move(other.Decorations);
+        }
+        return *this;
+    }
+    pending_link(const pending_link&) = delete;
+    pending_link& operator=(const pending_link&) = delete;
+
+    // connect() releases before the edge is realized; a non-null Source here means the chain
+    // never reached a target node (silent no-op would drop labels / styles).
+    // Abort (not throw): safe if destruction runs during another exception unwind.
+    ~pending_link()
+    {
+        if (Source == nullptr)
+            return;
+        std::fputs(
+          "periscope: incomplete >> chain — pending_link discarded without a target node "
+          "(write `a >> props >> b`, not `a >> props`)\n",
+          stderr);
+        std::abort();
+    }
+
+    void release() noexcept { Source = nullptr; }
 };
 
 // link_ref is the result of `a >> b`: the created link plus its target, so chains continue from the target
@@ -87,14 +124,17 @@ class link_ref
 namespace detail {
 // connect creates the link for a completed pending edge
 inline link_ref
-connect(const pending_link& _pending, node& _target)
+connect(pending_link _pending, node& _target)
 {
+    // Release first so ~pending_link is inert even if create_link / set throws.
     node& source = *_pending.Source;
+    auto decorations = std::move(_pending.Decorations);
+    _pending.release();
     if (source.owner() == nullptr || source.owner() != _target.owner())
         throw std::runtime_error("Cannot link nodes that do not belong to the same graph");
     link& created = source.owner()->create_link();
     created.set<LP_source>(source).set<LP_target>(_target);
-    for (const auto& apply : _pending.Decorations)
+    for (const auto& apply : decorations)
         apply(created);
     return link_ref(created, _target);
 }
@@ -123,7 +163,9 @@ template<typename lit>
 concept link_property_literal =
   property_literal_value<lit> && detail::link_applicable_property<typename std::remove_cvref_t<lit>::property>;
 
-// link_decoration lists what may sit between two nodes in a `>>` chain
+// link_decoration lists what may sit between two nodes in a `>>` chain.
+// A chain that stops on a decoration (no target node) yields a discarded pending_link
+// and fails: [[nodiscard]] at compile time, logic_error if forced through (void).
 template<typename t>
 concept link_decoration =
   link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label> ||
@@ -185,7 +227,7 @@ operator>>(const link_ref& _chain, decoration _decoration)
 inline link_ref
 operator>>(pending_link _pending, node& _target)
 {
-    return detail::connect(_pending, _target);
+    return detail::connect(std::move(_pending), _target); // releases before destroy
 }
 
 inline link_ref

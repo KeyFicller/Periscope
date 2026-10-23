@@ -26,6 +26,9 @@ example1_flowchart()
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)):
     // composed LP_style::*_*_arrow avoids `k_dashed | k_arrow_mask` and trailing .set()
     start >> process >> decision >> "Yes"_op_name >> end;
+    // Incomplete chain (no destination) is rejected: pending_link is [[nodiscard]] and its
+    // destructor aborts if never connected — e.g. the following would fail, not silently drop:
+    //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
     // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
