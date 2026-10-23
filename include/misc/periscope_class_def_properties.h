@@ -54,23 +54,4 @@ operator""_mcd_color(const char* _str, std::size_t _len)
 {
     return property_literal<MCD_color>{ std::string(_str, _len) };
 }
-
-// Runtime colors: same deduced path as ""_mcd_* for non-literal values
-inline property_literal<MCD_fill>
-mcd_fill(std::string _value)
-{
-    return property_literal<MCD_fill>{ std::move(_value) };
-}
-
-inline property_literal<MCD_stroke>
-mcd_stroke(std::string _value)
-{
-    return property_literal<MCD_stroke>{ std::move(_value) };
-}
-
-inline property_literal<MCD_color>
-mcd_color(std::string _value)
-{
-    return property_literal<MCD_color>{ std::move(_value) };
-}
 }

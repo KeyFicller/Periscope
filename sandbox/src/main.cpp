@@ -111,7 +111,7 @@ example3_gantt()
       .set(GP_output_format<>::k_markdown)
       .set(GP_date_format<>::k_hour_minute);
 
-    // Three tasks: pack name + ticks via deduced UDLs (runtime: np_time_tick_start(tick_var), same set path)
+    // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
     _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
     _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
     _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);

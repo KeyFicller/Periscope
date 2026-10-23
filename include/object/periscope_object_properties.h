@@ -110,13 +110,6 @@ operator""_op_name(const char* _str, std::size_t _len)
     return property_literal<OP_name>{ std::string(_str, _len) };
 }
 
-// Runtime names: same property_literal tagging as the UDL (variables cannot use ""_op_name)
-inline property_literal<OP_name>
-op_name(std::string _value)
-{
-    return property_literal<OP_name>{ std::move(_value) };
-}
-
 // OP_printable is property for whether object is printable
 struct OP_printable : base_property<bool, base_object>
 {};
