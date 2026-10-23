@@ -37,6 +37,9 @@ struct MNP_orient : public base_property<enum_type, note>
 
 struct MNP_basis : public base_property<std::vector<std::shared_ptr<base_handle>>, note>
 {
+    // Vector of participants → append when the same key repeats in a deduced pack
+    static constexpr property_reduce reduce = property_reduce::append;
+
     // to_string is to convert property to string representation
     static std::string to_string(const MNP_basis& _property, graph_type _graph_type = io().GraphType)
     {

@@ -25,12 +25,15 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 ## Example 1: Flowchart (using int as handle)
 
 Create a flowchart with `int` handles. Properties are applied in one deduced pack
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`); each owning
-property may appear **at most once** in a `new_object` / `>>` pack (duplicate
-`OP_name` / `NP_shape` / `LP_style` / `LP_activate` is a compile error). Sequential
-`.set()` after create is still fine for later mutation. Edges are **one-shot**:
-write the full `a >> props >> b` expression (no bare `std::string` / `const char*`
-on `>>` — literals use `"..."_op_name`, runtime names use `label{}`).
+(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`). **Replace**
+strategy (scalars, the default): each owning property may appear **at most once**
+in a `new_object` / `>>` pack (duplicate `OP_name` / `NP_shape` / `LP_style` /
+`LP_activate` is a compile error). **Append** strategy (vector props such as
+`NP_subgraph_node` / `MNP_basis`): the same key may repeat; chunks concatenate at
+apply time. Sequential `.set()` after create still **assigns** (replace), and is
+fine for later mutation. Edges are **one-shot**: write the full `a >> props >> b`
+expression (no bare `std::string` / `const char*` on `>>` — literals use
+`"..."_op_name`, runtime names use `label{}`).
 
 ```cpp
 #include "periscope.h"
@@ -71,6 +74,24 @@ flowchart TD
 1 --> 2
 2 --"Yes"--> 3
 2 -."No".-> 1
+```
+
+## Vector props: per-property append reduce
+
+`NP_subgraph_node` and `MNP_basis` declare `property_reduce::append`. Duplicate keys
+in one `new_object` pack fold by concatenating; scalars stay unique. Tag chunks with
+`property_literal<Prop>{ vector… }` (no parallel factory). Sequential `.set<Prop>(…)`
+still replaces.
+
+```cpp
+node& a = g.new_object<node>("A"_op_name, NP_shape::k_rectangle);
+node& b = g.new_object<node>("B"_op_name, NP_shape::k_rectangle);
+node& group = g.new_object<node>(
+    "Group"_op_name,
+    property_literal<NP_subgraph_node>{ { a.get_handle() } },
+    property_literal<NP_subgraph_node>{ { b.get_handle() } }); // append → {a, b}
+
+// group.set<NP_subgraph_node>(…) still replaces the whole vector
 ```
 
 ## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)

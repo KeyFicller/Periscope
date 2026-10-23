@@ -125,10 +125,9 @@ struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b
     {
         if (Source == nullptr)
             return;
-        std::fputs(
-          "periscope: incomplete >> chain — pending_link discarded without a target node "
-          "(write `a >> props >> b`, not `a >> props`)\n",
-          stderr);
+        std::fputs("periscope: incomplete >> chain — pending_link discarded without a target node "
+                   "(write `a >> props >> b`, not `a >> props`)\n",
+                   stderr);
         std::abort();
     }
 
@@ -195,7 +194,7 @@ connect(pending_link<decorations...> _pending, node& _target)
         throw std::runtime_error("Cannot link nodes that do not belong to the same graph");
     link& created = source.owner()->create_link();
     created.set<LP_source>(source).set<LP_target>(_target);
-    std::apply([&created](auto&&... _deco) { (created.set(std::forward<decltype(_deco)>(_deco)), ...); },
+    std::apply([&created](auto&&... _deco) { (created.apply_pack_arg(std::forward<decltype(_deco)>(_deco)), ...); },
                std::move(decorations_pack));
     return link_ref(created, _target);
 }
@@ -208,9 +207,9 @@ start(node& _source)
 
 // Properties applicable to a link: link-owned props, or base_object props shared by all objects (OP_name)
 template<typename prop>
-concept link_applicable_property = requires { typename prop::owner_type; } &&
-                                   (std::is_base_of_v<link, typename prop::owner_type> ||
-                                    std::is_same_v<base_object, typename prop::owner_type>);
+concept link_applicable_property = requires {
+    typename prop::owner_type;
+} && (std::is_base_of_v<link, typename prop::owner_type> || std::is_same_v<base_object, typename prop::owner_type>);
 } // namespace detail
 
 // Nested property enums whose owning property applies to link (e.g. LP_style::style, LP_activate::activation)
@@ -227,7 +226,8 @@ concept link_property_literal =
 // props): literals use "..."_op_name; runtime names use label{} or set<OP_name>.
 // Edges are one-shot rvalue chains; a chain that stops on a decoration (no target) yields a
 // discarded pending_link and fails: [[nodiscard]] at compile time, abort if forced through (void).
-// Each owning property may appear at most once in a chain (see operator>> static_assert).
+// Replace-strategy owning props appear at most once (see operator>> static_assert);
+// append-strategy (vector) props may repeat and fold at connect — none on links yet.
 template<typename t>
 concept link_decoration =
   link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label>;
@@ -239,15 +239,15 @@ template<typename... decorations, typename deco>
 auto
 operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
-    // Reject duplicate owning properties at the append site (vs. silent overwrite at
-    // connect/set). Pack-level: sizeof...(keys) == unique deduced keys (same helper as
-    // new_object). Keys by property type: OP_name / LP_style / LP_activate — so
-    // "Yes"_op_name + label{}, or two LP_style::*, fail here.
+    // Reject duplicate *replace-strategy* owning properties at the append site (vs. silent
+    // overwrite at connect/set). Pack-level among replace keys only (same helper as
+    // new_object). Scalar keys OP_name / LP_style / LP_activate — so "Yes"_op_name +
+    // label{}, or two LP_style::*, fail here. Append-strategy keys would be allowed.
     static_assert(detail::owning_properties_unique_v<detail::link_decoration_property_t<decorations>...,
                                                      detail::link_decoration_property_t<deco>>,
-                  "periscope: duplicate property in >> chain — each of OP_name / LP_style / "
-                  "LP_activate may appear at most once (e.g. not two styles, not "
-                  "\"Yes\"_op_name together with label{})");
+                  "periscope: duplicate replace-strategy property in >> chain — each of "
+                  "OP_name / LP_style / LP_activate may appear at most once (e.g. not two "
+                  "styles, not \"Yes\"_op_name together with label{})");
     using normalized = typename detail::normalize_link_decoration<deco>::type;
     node* source = _pending.Source;
     auto pack = std::move(_pending.Decorations);
