@@ -78,10 +78,6 @@ struct link_decoration_property<label>
 template<typename deco>
 using link_decoration_property_t = typename link_decoration_property<std::remove_cvref_t<deco>>::type;
 
-// True when deco's owning property is not already in the typed pack.
-template<typename deco, typename... decorations>
-inline constexpr bool link_decoration_property_unique_v =
-  !type_list_contains_v<type_list<link_decoration_property_t<decorations>...>, link_decoration_property_t<deco>>;
 } // namespace detail
 
 // pending_link is a typed incomplete edge used only as a temporary in a one-shot `>>` chain
@@ -244,12 +240,11 @@ auto
 operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
     // Reject duplicate owning properties at the append site (vs. silent overwrite at
-    // connect/set). Keys by property type: OP_name / LP_style / LP_activate — so
-    // "Yes"_op_name + label{}, or two LP_style::*, fail here. The colliding Prop is
-    // named in the instantiation (require_unique_owning_property<Prop, false>).
-    static_assert(detail::require_unique_owning_property<
-                    detail::link_decoration_property_t<deco>,
-                    detail::link_decoration_property_unique_v<deco, decorations...>>::value,
+    // connect/set). Pack-level: sizeof...(keys) == unique deduced keys (same helper as
+    // new_object). Keys by property type: OP_name / LP_style / LP_activate — so
+    // "Yes"_op_name + label{}, or two LP_style::*, fail here.
+    static_assert(detail::owning_properties_unique_v<detail::link_decoration_property_t<decorations>...,
+                                                     detail::link_decoration_property_t<deco>>,
                   "periscope: duplicate property in >> chain — each of OP_name / LP_style / "
                   "LP_activate may appear at most once (e.g. not two styles, not "
                   "\"Yes\"_op_name together with label{})");

@@ -103,35 +103,15 @@ struct deduced_property_key<e>
 template<typename arg>
 using deduced_property_key_t = typename deduced_property_key<std::remove_cvref_t<arg>>::type;
 
-// Typed uniqueness gate: when Unique is false, the failing Prop appears in the
-// instantiation stack (require_unique_owning_property<OP_name, false>).
-template<typename prop, bool unique>
-struct require_unique_owning_property
-{
-    static_assert(unique,
-                  "periscope: duplicate owning property in deduced pack — each property "
-                  "may appear at most once (see Prop in this instantiation; e.g. not two "
-                  "OP_name / NP_shape values in one new_object / >> chain)");
-    static constexpr bool value = unique;
-};
-
-// True when every property in the pack appears once (first duplicate is named as Prop).
+// Pack-level uniqueness: sizeof...(props) vs unique deduced keys (type_list_unique).
+// No per-Prop helper — operate on the pack directly (shared by new_object / >>).
 template<typename... props>
-struct owning_properties_unique;
-
-template<>
-struct owning_properties_unique<> : std::true_type
-{};
-
-template<typename first, typename... rest>
-struct owning_properties_unique<first, rest...>
-  : std::bool_constant<require_unique_owning_property<first, !type_list_contains_v<type_list<rest...>, first>>::value &&
-                       owning_properties_unique<rest...>::value>
-{};
+inline constexpr bool owning_properties_unique_v =
+  sizeof...(props) == type_list_unique_t<type_list<props...>>::size;
 
 template<typename... args>
 inline constexpr bool deduced_args_unique_v =
-  owning_properties_unique<deduced_property_key_t<args>...>::value;
+  owning_properties_unique_v<deduced_property_key_t<args>...>;
 } // namespace detail
 
 // base_property is base class for all properties
