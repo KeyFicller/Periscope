@@ -11,31 +11,17 @@ example1_flowchart()
     graph _graph;
     _graph.set("Hello"_op_name);
 
-    // Create class definitions
-    class_def& start_class = _graph.new_object<class_def>();
-    start_class.set("Start"_op_name).set<MCD_fill>("#4A90E2").set<MCD_stroke>("#2E5C8A").set<MCD_color>("#fff");
+    // Class defs: discard return; pack name + MCD_* via deduced UDLs (no (void), no set<MCD_*>)
+    _graph.new_object<class_def>("Start"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("Process"_op_name, "#F5A623"_mcd_fill, "#C97E1C"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    class_def& process_class = _graph.new_object<class_def>();
-    process_class.set("Process"_op_name).set<MCD_fill>("#F5A623").set<MCD_stroke>("#C97E1C").set<MCD_color>("#fff");
-
-    class_def& decision_class = _graph.new_object<class_def>();
-    decision_class.set("Decision"_op_name).set<MCD_fill>("#7ED321").set<MCD_stroke>("#5FA319").set<MCD_color>("#fff");
-
-    class_def& end_class = _graph.new_object<class_def>();
-    end_class.set("End"_op_name).set<MCD_fill>("#D0021B").set<MCD_stroke>("#A00115").set<MCD_color>("#fff");
-
-    // Create nodes: "_op_name" / "_np_class_def" UDLs mirror OP_/NP_ property names; nested enums deduce NP_shape
-    node& start = _graph.new_object<node>();
-    start.set("Start"_op_name).set(NP_shape::k_rectangle).set("Start"_np_class_def);
-
-    node& process = _graph.new_object<node>();
-    process.set("Process Data"_op_name).set(NP_shape::k_rectangle).set("Process"_np_class_def);
-
-    node& decision = _graph.new_object<node>();
-    decision.set("Decision"_op_name).set(NP_shape::k_diamond).set("Decision"_np_class_def);
-
-    node& end = _graph.new_object<node>();
-    end.set("End"_op_name).set(NP_shape::k_rectangle).set("End"_np_class_def);
+    // Create nodes: one call packs name / shape / class (UDLs + nested enums from #5)
+    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
+    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
+    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
+    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
 
     // Link props in the `>>` world — two equivalent patterns:
     // 1) In-chain decoration: property enums / UDLs between nodes (preferred for labels)
@@ -125,21 +111,10 @@ example3_gantt()
       .set(GP_output_format<>::k_markdown)
       .set(GP_date_format<>::k_hour_minute);
 
-    // Three tasks; ticks print zero-padded HH:mm to match dateFormat
-    node& design = _graph.new_object<node>();
-    design.set("Design"_op_name)
-      .set<NP_time_tick_start>("9:0"_tick)
-      .set<NP_time_tick_end>("12:0"_tick);
-
-    node& build = _graph.new_object<node>();
-    build.set("Build"_op_name)
-      .set<NP_time_tick_start>("12:0"_tick)
-      .set<NP_time_tick_end>("15:30"_tick);
-
-    node& test = _graph.new_object<node>();
-    test.set("Test"_op_name)
-      .set<NP_time_tick_start>("15:30"_tick)
-      .set<NP_time_tick_end>("17:0"_tick);
+    // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
+    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
+    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
+    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
 
     std::cout << "=== Example 3: Gantt Chart ===\n";
     std::cout << _graph.to_string() << std::endl;

@@ -112,4 +112,17 @@ struct NP_time_tick_end : public NP_time_tick
 {
     using NP_time_tick::NP_time_tick;
 };
+
+// "9:0"_np_time_tick_start / _end -> property_literal so set()/new_object deduce NP_time_tick_*
+inline property_literal<NP_time_tick_start>
+operator""_np_time_tick_start(const char* _str, std::size_t _len)
+{
+    return property_literal<NP_time_tick_start>{ operator""_tick(_str, _len) };
+}
+
+inline property_literal<NP_time_tick_end>
+operator""_np_time_tick_end(const char* _str, std::size_t _len)
+{
+    return property_literal<NP_time_tick_end>{ operator""_tick(_str, _len) };
+}
 } // namespace periscope

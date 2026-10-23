@@ -32,43 +32,21 @@ Create a flowchart directly using the API with `int` as the handle type:
 
 int main() {
     using namespace periscope;
-    
-    graph<int> _graph;
-    
-    // Create nodes
-    node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle);
-    
-    node& process = _graph.new_object<node>();
-    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle);
-    
-    node& decision = _graph.new_object<node>();
-    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond);
-    
-    node& end = _graph.new_object<node>();
-    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle);
-    
-    // Create links
-    link& link1 = _graph.new_object<link>();
-    link1.set<LP_source>(start)
-         .set<LP_target>(process)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-    
-    link& link2 = _graph.new_object<link>();
-    link2.set<LP_source>(process)
-         .set<LP_target>(decision)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-    
-    link& link3 = _graph.new_object<link>();
-    link3.set<LP_source>(decision)
-         .set<LP_target>(end)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)
-         .set<OP_name>("Yes");
-    
-    // Configure graph
-    _graph.template set<GP_type>(graph_type::k_flowchart)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_flowchart_direction>(GP_flowchart_direction<int>::k_top_to_down);
+
+    graph _graph;
+
+    // Variadic new_object applies deduced properties (UDLs / nested enums) in one call
+    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
+    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
+    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
+    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
+
+    // operator>> creates links; labels / styles can sit between nodes
+    start >> process >> decision >> "Yes"_op_name >> end;
+
+    _graph.set(GP_type<>::k_flowchart)
+          .set(GP_output_format<>::k_markdown)
+          .set(GP_flowchart_direction<>::k_top_to_down);
     std::cout << _graph.to_string() << std::endl;
     return 0;
 }
@@ -181,25 +159,15 @@ formatted to match `GP_date_format` (zero-padded `HH:mm` or `MM-DD`):
 int main() {
     using namespace periscope;
 
-    graph<int> _graph;
-    _graph.template set<GP_type>(graph_type::k_gantt)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+    graph _graph;
+    _graph.set(GP_type<>::k_gantt)
+          .set(GP_output_format<>::k_markdown)
+          .set(GP_date_format<>::k_hour_minute);
 
-    node& design = _graph.new_object<node>();
-    design.set<OP_name>("Design")
-          .set<NP_time_tick_start>("9:0"_tick)
-          .set<NP_time_tick_end>("12:0"_tick);
-
-    node& build = _graph.new_object<node>();
-    build.set<OP_name>("Build")
-         .set<NP_time_tick_start>("12:0"_tick)
-         .set<NP_time_tick_end>("15:30"_tick);
-
-    node& test = _graph.new_object<node>();
-    test.set<OP_name>("Test")
-        .set<NP_time_tick_start>("15:30"_tick)
-        .set<NP_time_tick_end>("17:0"_tick);
+    // Pack name + ticks via deduced UDLs (mirrors OP_/NP_ naming)
+    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
+    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
+    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
 
     std::cout << _graph.to_string() << std::endl;
     return 0;
