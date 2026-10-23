@@ -29,7 +29,7 @@ class graph
     graph()
     {
         // default type is flowchart
-        this->template set<GP_type>(graph_type::k_flowchart);
+        this->set(GP_type<underlying_type>::k_flowchart);
         this->template set<OP_printable>(true);
     }
 
@@ -38,7 +38,7 @@ class graph
     {
         if (!this->template has<GP_type<underlying_type>>())
             throw std::runtime_error("Graph type not set, please set it before calling to_string");
-        io().GraphType = this->template get<GP_type<underlying_type>>().Value;
+        io().GraphType = static_cast<graph_type>(this->template get<GP_type<underlying_type>>().Value);
         return object<graph<underlying_type>>::to_string();
     }
 
@@ -70,7 +70,7 @@ class graph
     template<template<typename> class prop>
     graph& set_from_tag(graph_property_tag<prop>, enum_type _value)
     {
-        return set<prop>(_value);
+        return set<prop>(static_cast<typename prop<underlying_type>::type>(_value));
     }
 
   public:
@@ -83,7 +83,8 @@ class graph
 
         graph_output_format output_format = graph_output_format::k_markdown;
         if (this->template has<GP_output_format<underlying_type>>())
-            output_format = this->template get<GP_output_format<underlying_type>>().Value;
+            output_format = static_cast<graph_output_format>(
+              this->template get<GP_output_format<underlying_type>>().Value);
 
         switch (output_format) {
             case graph_output_format::k_markdown:

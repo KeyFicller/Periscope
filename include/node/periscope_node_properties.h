@@ -60,9 +60,17 @@ struct NP_class_def : base_property<std::string, node>
     // to_string is to convert property to string representation
     static std::string to_string(const NP_class_def& _property, graph_type _graph_type = io().GraphType)
     {
+        (void)_graph_type;
         return _property.Value;
     }
 };
+
+// "Start"_class -> property_literal<NP_class_def>, so set("Start"_class) deduces NP_class_def
+inline property_literal<NP_class_def>
+operator""_class(const char* _str, std::size_t _len)
+{
+    return property_literal<NP_class_def>{ std::string(_str, _len) };
+}
 
 // NP_time_tick is property for node time tick
 

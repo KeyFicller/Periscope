@@ -207,6 +207,14 @@ class object : public base_object
         return set<property_of_t<e>>(static_cast<typename property_of_t<e>::type>(_value));
     }
 
+    // set overload: deduce the property from a string UDL, e.g. set("Start"_name)
+    template<typename lit>
+        requires property_literal_value<lit>
+    object& set(lit _literal)
+    {
+        return set<typename std::remove_cvref_t<lit>::property>(std::move(_literal.Value));
+    }
+
   public:
     // to_string is implementation of base_object::to_string
     std::string to_string(graph_type _graph_type = io().GraphType) const override

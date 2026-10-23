@@ -43,20 +43,31 @@ struct GP_sequence_show_number : base_property<bool, graph<underlying_type>>
     }
 };
 
-// GP_type is property for graph type
-template<typename underlying_type>
-struct GP_type : base_property<graph_type, graph<underlying_type>>
+// GP_type is property for graph type (nested enum aligned with freestanding graph_type)
+template<typename underlying_type = int>
+struct GP_type : base_property<enum_type, graph<underlying_type>>
 {
+    // Values aligned with graph_type in periscope_graph_fwd.h.
+    // Named chart_type (not `type`) so it does not shadow base_property::type.
+    enum chart_type : enum_type
+    {
+        k_flowchart = 0,
+        k_sequence = 1,
+        k_gantt = 2,
+    };
+    friend graph_property_tag<GP_type> periscope_property_of(chart_type) { return {}; }
+
     using child_properties = type_list<GP_sequence_show_number<underlying_type>>;
 
     static std::string to_string(const GP_type& _property, graph_type _graph_type = io().GraphType)
     {
+        (void)_graph_type;
         switch (_property.Value) {
-            case graph_type::k_flowchart:
+            case chart_type::k_flowchart:
                 return "flowchart";
-            case graph_type::k_sequence:
+            case chart_type::k_sequence:
                 return "sequenceDiagram";
-            case graph_type::k_gantt:
+            case chart_type::k_gantt:
                 return "gantt";
             default:
                 return "";
@@ -64,10 +75,18 @@ struct GP_type : base_property<graph_type, graph<underlying_type>>
     }
 };
 
-// GP_output_format is property for graph output format
-template<typename underlying_type>
-struct GP_output_format : base_property<graph_output_format, graph<underlying_type>>
-{};
+// GP_output_format is property for graph output format (nested enum aligned with freestanding)
+template<typename underlying_type = int>
+struct GP_output_format : base_property<enum_type, graph<underlying_type>>
+{
+    // Values aligned with graph_output_format in periscope_graph_fwd.h
+    enum output_format : enum_type
+    {
+        k_mermaid = 0,
+        k_markdown = 1,
+    };
+    friend graph_property_tag<GP_output_format> periscope_property_of(output_format) { return {}; }
+};
 
 // GP_flowchart_direction is property for graph flowchart direction
 template<typename underlying_type = int>
