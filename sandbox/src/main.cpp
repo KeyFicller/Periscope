@@ -64,6 +64,8 @@ class Service
         handle<const void*> this_handle(reinterpret_cast<const void*>(this));
         handle<const void*> target_handle(reinterpret_cast<const void*>(target));
 
+        // new_object_at accepts the same deduced property pack as new_object; runtime
+        // strings still use explicit set<OP_name> (no parallel property_literal factory).
         if (!registered[this]) {
             hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
             registered[this] = true;
@@ -73,7 +75,7 @@ class Service
             registered[target] = true;
         }
 
-        // Sequence message: runtime label via label{}; activation via nested LP_activate enum
+        // Runtime message via explicit label{}; literals prefer "..."_op_name
         auto& src = hook_graph.access<node>(this_handle);
         auto& dst = hook_graph.access<node>(target_handle);
         if (activate_target)
@@ -87,7 +89,7 @@ class Service
         auto& hook_graph = get_hook_graph();
         hook_graph.set(GP_type<>::k_sequence)
           .set(GP_output_format<>::k_markdown)
-          .template set<GP_sequence_show_number>(true);
+          .set(GP_sequence_show_number<>::k_on);
         std::cout << "=== Example 2: Sequence Diagram ===\n";
         std::cout << hook_graph.to_string() << std::endl;
     }

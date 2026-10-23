@@ -194,6 +194,7 @@ operator>>(pending_link _pending, lit _literal)
 inline pending_link
 operator>>(pending_link _pending, label _label)
 {
+    // Explicit runtime OP_name — bare std::string is not a decoration (ambiguous with other string props)
     return std::move(_pending) >> property_literal<OP_name>{ std::move(_label.Value) };
 }
 

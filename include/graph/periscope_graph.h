@@ -241,10 +241,12 @@ class graph
         return const_cast<graph<underlying_type>*>(this)->access<t>(_handle);
     }
 
-    // new_object_at is to create a new object with specific handle
-    template<typename t>
-    t& new_object_at(const handle<underlying_type>& _handle)
+    // new_object_at: same deduced property pack as new_object, pinned to a handle
+    // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle)
+    template<typename t, typename... args>
+    t& new_object_at(const handle<underlying_type>& _handle, args&&... _args)
     {
+        static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
         if (m_handle_manager.is_allocated(_handle))
             throw std::runtime_error("Handle already allocated");
         auto ptr = std::make_unique<t>();
@@ -254,6 +256,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
+        (ref.set(std::forward<args>(_args)), ...);
         return ref;
     }
 
