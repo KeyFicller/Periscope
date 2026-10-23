@@ -74,7 +74,6 @@ class graph
     }
 
   public:
-
   public:
     // to_string_impl is implementation of object::to_string_impl
     std::string to_string_impl(graph_type _graph_type = io().GraphType) const
@@ -83,8 +82,8 @@ class graph
 
         graph_output_format output_format = graph_output_format::k_markdown;
         if (this->template has<GP_output_format<underlying_type>>())
-            output_format = static_cast<graph_output_format>(
-              this->template get<GP_output_format<underlying_type>>().Value);
+            output_format =
+              static_cast<graph_output_format>(this->template get<GP_output_format<underlying_type>>().Value);
 
         switch (output_format) {
             case graph_output_format::k_markdown:
@@ -112,8 +111,7 @@ class graph
         // Graph info
         str += this->template _V_str<GP_type<underlying_type>>();
         {
-            std::string direction_str =
-              this->template _V_str<GP_flowchart_direction<underlying_type>>();
+            std::string direction_str = this->template _V_str<GP_flowchart_direction<underlying_type>>();
             if (!direction_str.empty()) {
                 str += " ";
                 str += direction_str;
@@ -128,8 +126,7 @@ class graph
                 str += "\n";
                 break;
             case graph_type::k_gantt:
-                str += std::format("    {}\n",
-                                   this->template _V_str<GP_date_format<underlying_type>>());
+                str += std::format("    {}\n", this->template _V_str<GP_date_format<underlying_type>>());
                 break;
             default:
                 break;
@@ -205,14 +202,15 @@ class graph
   public:
     // new_object creates an object and optionally applies deduced properties in one call,
     // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
-    // Each owning property may appear at most once in the pack (same uniqueness as >>):
-    // duplicate OP_name / NP_shape / … is a compile error — no silent overwrite via set().
+    // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
+    // NP_shape / … is a compile error. Append-strategy (vector) props may repeat; chunks
+    // concatenate via apply_pack_arg (sequential .set() still assigns / replaces).
     template<typename t, typename... args>
     t& new_object(args&&... _args)
     {
         static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
         static_assert(detail::deduced_args_unique_v<args...>,
-                      "periscope: duplicate owning property in new_object pack");
+                      "periscope: duplicate replace-strategy owning property in new_object pack");
         auto _handle = m_handle_manager.allocate();
         auto ptr = std::make_unique<t>();
         t& ref = *ptr;
@@ -220,7 +218,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
-        (ref.set(std::forward<args>(_args)), ...);
+        (ref.apply_pack_arg(std::forward<args>(_args)), ...);
         return ref;
     }
 
@@ -247,13 +245,13 @@ class graph
 
     // new_object_at: same deduced property pack as new_object, pinned to a handle
     // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle).
-    // Pack uniqueness matches new_object (duplicate owning property is a compile error).
+    // Pack uniqueness / append fold match new_object.
     template<typename t, typename... args>
     t& new_object_at(const handle<underlying_type>& _handle, args&&... _args)
     {
         static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
         static_assert(detail::deduced_args_unique_v<args...>,
-                      "periscope: duplicate owning property in new_object_at pack");
+                      "periscope: duplicate replace-strategy owning property in new_object_at pack");
         if (m_handle_manager.is_allocated(_handle))
             throw std::runtime_error("Handle already allocated");
         auto ptr = std::make_unique<t>();
@@ -263,7 +261,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
-        (ref.set(std::forward<args>(_args)), ...);
+        (ref.apply_pack_arg(std::forward<args>(_args)), ...);
         return ref;
     }
 

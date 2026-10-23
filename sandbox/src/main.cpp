@@ -18,9 +18,10 @@ example1_flowchart()
     _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
     // Create nodes: one call packs name / shape / class (UDLs + nested enums from #5).
-    // Duplicate owning properties in one pack are a compile error (same uniqueness as >>), e.g.:
+    // Duplicate *replace-strategy* (scalar) owning props in one pack are a compile error, e.g.:
     //   _graph.new_object<node>("A"_op_name, "B"_op_name);           // two OP_name
     //   _graph.new_object<node>(NP_shape::k_rect, NP_shape::k_diamond); // two NP_shape
+    // Vector props declare append reduce — duplicates fold (see example4_vector_reduce).
     node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
     node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
@@ -32,15 +33,13 @@ example1_flowchart()
     // Incomplete chain (no destination) is rejected: typed pending_link<...> is [[nodiscard]]
     // and its destructor aborts if never connected — e.g. the following would fail, not silently drop:
     //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
-    // Duplicate owning properties in one chain are a compile error (typed pack uniqueness), e.g.:
+    // Duplicate replace-strategy props in one chain are a compile error, e.g.:
     //   decision >> "No"_op_name >> label{"x"} >> process;          // two OP_name
     //   decision >> LP_style::k_dashed >> LP_style::k_solid >> process; // two LP_style
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
     // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
-    _graph.set(GP_type<>::k_flowchart)
-      .set(GP_output_format<>::k_markdown)
-      .set(GP_flowchart_direction<>::k_top_to_down);
+    _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
 
     std::cout << "=== Example 1: Flowchart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -95,9 +94,7 @@ class Service
     static void print_graph()
     {
         auto& hook_graph = get_hook_graph();
-        hook_graph.set(GP_type<>::k_sequence)
-          .set(GP_output_format<>::k_markdown)
-          .set(GP_sequence_show_number<>::k_on);
+        hook_graph.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown).set(GP_sequence_show_number<>::k_on);
         std::cout << "=== Example 2: Sequence Diagram ===\n";
         std::cout << hook_graph.to_string() << std::endl;
     }
@@ -124,9 +121,7 @@ void
 example3_gantt()
 {
     graph _graph;
-    _graph.set(GP_type<>::k_gantt)
-      .set(GP_output_format<>::k_markdown)
-      .set(GP_date_format<>::k_hour_minute);
+    _graph.set(GP_type<>::k_gantt).set(GP_output_format<>::k_markdown).set(GP_date_format<>::k_hour_minute);
 
     // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
     _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
@@ -137,6 +132,49 @@ example3_gantt()
     std::cout << _graph.to_string() << std::endl;
 }
 
+// Example 4: vector-valued props declare append reduce — duplicate keys in a deduced
+// pack concatenate; scalars stay unique; sequential .set() still replaces.
+void
+example4_vector_reduce()
+{
+    graph _graph;
+    _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
+
+    node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
+    node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
+    node& c = _graph.new_object<node>("C"_op_name, NP_shape::k_rectangle);
+
+    // Two NP_subgraph_node chunks in one pack → append fold (size 2).
+    // property_literal tags the vector chunk; no parallel factory.
+    node& group = _graph.new_object<node>("Group"_op_name,
+                                          property_literal<NP_subgraph_node>{ { a.get_handle() } },
+                                          property_literal<NP_subgraph_node>{ { b.get_handle(), c.get_handle() } });
+
+    const auto& members = group.get<NP_subgraph_node>().Value;
+    std::cout << "=== Example 4: vector append reduce ===\n";
+    std::cout << "subgraph member count (expect 3): " << members.size() << "\n";
+
+    // Sequential .set() unchanged: assign/replace, does not append.
+    group.set<NP_subgraph_node>(std::vector<std::shared_ptr<base_handle>>{ a.get_handle() });
+    std::cout << "after set<> replace (expect 1): " << group.get<NP_subgraph_node>().Value.size() << "\n";
+
+    // Restore folded members for Mermaid output
+    group.set<NP_subgraph_node>(
+      std::vector<std::shared_ptr<base_handle>>{ a.get_handle(), b.get_handle(), c.get_handle() });
+
+    // Sequence note: two MNP_basis chunks append across participants
+    graph seq;
+    seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
+    node& client = seq.new_object<node>("Client"_op_name);
+    node& server = seq.new_object<node>("Server"_op_name);
+    note& n = seq.new_object<note>("shared context"_op_name,
+                                   property_literal<MNP_basis>{ { client.get_handle() } },
+                                   property_literal<MNP_basis>{ { server.get_handle() } });
+    std::cout << "note basis count (expect 2): " << n.get<MNP_basis>().Value.size() << "\n";
+    std::cout << _graph.to_string() << "\n";
+    std::cout << seq.to_string() << std::endl;
+}
+
 int
 main()
 {
@@ -145,5 +183,7 @@ main()
     example2_sequence();
     std::cout << "\n";
     example3_gantt();
+    std::cout << "\n";
+    example4_vector_reduce();
     return 0;
 }

@@ -81,6 +81,17 @@ periscope_property_of(const property_literal<prop>&)
     return {};
 }
 
+// property_reduce: how duplicate owning keys in a deduced pack / >> chain fold.
+// replace (default, scalars): at most one appearance (pack-level uniqueness).
+// append (vector-valued props): multiple appearances concatenate into one slot.
+// bitwise_or: reserved for flag masks (not folded yet).
+enum class property_reduce
+{
+    replace,
+    append,
+    bitwise_or,
+};
+
 namespace detail {
 // Owning property key for a deduced set()/new_object argument (UDL or nested enum).
 // Uniqueness is by property type (OP_name / NP_shape / …), not by value.
@@ -103,15 +114,29 @@ struct deduced_property_key<e>
 template<typename arg>
 using deduced_property_key_t = typename deduced_property_key<std::remove_cvref_t<arg>>::type;
 
-// Pack-level uniqueness: sizeof...(props) vs unique deduced keys (type_list_unique).
-// No per-Prop helper — operate on the pack directly (shared by new_object / >>).
+// Sequence that can be concatenated (std::vector and friends).
+template<typename t>
+concept appendable_sequence = requires(t& seq, const t& other) {
+    typename t::value_type;
+    seq.insert(seq.end(), other.begin(), other.end());
+};
+
+// Only replace-strategy keys participate in pack uniqueness; append keys may repeat.
+template<typename prop>
+using replace_key_list = std::conditional_t<prop::reduce == property_reduce::replace, type_list<prop>, type_list<>>;
+
+// Leading type_list<> so empty packs still form a valid concat (new_object<link>()).
+template<typename... props>
+using replace_keys_t = type_list_concat_t<type_list<>, replace_key_list<props>...>;
+
+// Pack-level uniqueness among replace keys only (sizeof pack_replace == unique).
+// Shared by new_object / >>. Append (vector) keys are excluded — folded at apply time.
 template<typename... props>
 inline constexpr bool owning_properties_unique_v =
-  sizeof...(props) == type_list_unique_t<type_list<props...>>::size;
+  replace_keys_t<props...>::size == type_list_unique_t<replace_keys_t<props...>>::size;
 
 template<typename... args>
-inline constexpr bool deduced_args_unique_v =
-  owning_properties_unique_v<deduced_property_key_t<args>...>;
+inline constexpr bool deduced_args_unique_v = owning_properties_unique_v<deduced_property_key_t<args>...>;
 } // namespace detail
 
 // base_property is base class for all properties
@@ -124,6 +149,8 @@ struct base_property
     using owner_type = owner;
     using child_properties = type_list<>;
     using parent_properties = type_list<>;
+    // Default: scalar uniqueness. Vector props override to append.
+    static constexpr property_reduce reduce = property_reduce::replace;
 };
 
 // OP_name is property for object name

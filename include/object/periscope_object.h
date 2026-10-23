@@ -6,8 +6,8 @@
 #include "type_hash/periscope_type_hash.h"
 
 #include <any>
-#include <memory>
 #include <map>
+#include <memory>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
@@ -213,6 +213,37 @@ class object : public base_object
     derived& set(lit _literal)
     {
         return set<typename std::remove_cvref_t<lit>::property>(std::move(_literal.Value));
+    }
+
+    // apply_pack_arg: reduce-aware apply for deduced packs (new_object / >> connect).
+    // replace → same as set (assign). append → concatenate into the existing slot.
+    // Sequential .set() stays assign-only; only pack/connect folding uses this.
+    template<typename lit>
+        requires property_literal_value<lit>
+    derived& apply_pack_arg(lit _literal)
+    {
+        using prop = typename std::remove_cvref_t<lit>::property;
+        if constexpr (prop::reduce == property_reduce::append) {
+            static_assert(detail::appendable_sequence<typename prop::type>,
+                          "periscope: append reduce requires an insertable sequence property type");
+            auto& slot = get_or_create<prop>().Value;
+            auto&& chunk = std::move(_literal.Value);
+            slot.insert(slot.end(), chunk.begin(), chunk.end());
+            return static_cast<derived&>(*this);
+        } else {
+            return set<prop>(std::move(_literal.Value));
+        }
+    }
+
+    template<typename e>
+        requires property_enum<e> && requires { typename property_of_t<e>::type; }
+    derived& apply_pack_arg(e _value)
+    {
+        using prop = property_of_t<e>;
+        // Nested enums are scalars today (replace). append enums would need a sequence value.
+        static_assert(prop::reduce == property_reduce::replace,
+                      "periscope: append reduce is for sequence property_literal packs, not enums");
+        return set(_value);
     }
 
   public:
