@@ -29,6 +29,9 @@ example1_flowchart()
     // Incomplete chain (no destination) is rejected: typed pending_link<...> is [[nodiscard]]
     // and its destructor aborts if never connected — e.g. the following would fail, not silently drop:
     //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
+    // Duplicate owning properties in one chain are a compile error (typed pack uniqueness), e.g.:
+    //   decision >> "No"_op_name >> label{"x"} >> process;          // two OP_name
+    //   decision >> LP_style::k_dashed >> LP_style::k_solid >> process; // two LP_style
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
     // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
