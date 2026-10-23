@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
@@ -54,12 +55,35 @@ template<typename e>
 using property_of_t = decltype(periscope_property_of(std::declval<e>()));
 
 // property_literal tags a value with its owning property so set("..."_op_name) /
-// set("9:0"_np_time_tick_start) deduce the property without an explicit template arg
+// set("9:0"_np_time_tick_start) deduce the property without an explicit template arg.
+// For vector-of-handle props (NP_subgraph_node / MNP_basis), a pack of get_handle()
+// owners (node&, note&, …) builds the vector — no .get_handle() at the call site.
 template<typename prop>
 struct property_literal
 {
     using property = prop;
-    typename prop::type Value;
+    typename prop::type Value{};
+
+    property_literal() = default;
+    property_literal(const typename prop::type& _value)
+      : Value(_value)
+    {
+    }
+    property_literal(typename prop::type&& _value)
+      : Value(std::move(_value))
+    {
+    }
+
+    // Handle-vector props: property_literal<NP_subgraph_node>{ a, b } packs a.get_handle()…
+    template<typename first, typename... rest>
+        requires requires { typename prop::type::value_type; } &&
+                 std::is_same_v<typename prop::type::value_type, std::shared_ptr<base_handle>> &&
+                 has_get_handle<std::remove_cvref_t<first>>::value &&
+                 (... && has_get_handle<std::remove_cvref_t<rest>>::value)
+    property_literal(first&& _first, rest&&... _rest)
+      : Value{ extract_handle(std::forward<first>(_first)), extract_handle(std::forward<rest>(_rest))... }
+    {
+    }
 };
 
 template<typename t>

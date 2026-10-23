@@ -50,7 +50,8 @@ struct NP_shape : base_property<enum_type, node>
     }
 };
 
-// NP_subgraph is property for node subgraph (vector → append reduce in deduced packs)
+// NP_subgraph is property for node subgraph (vector → append reduce in deduced packs).
+// Pack members with property_literal<NP_subgraph_node>{ a, b } (node& / handle owners).
 struct NP_subgraph_node : base_property<std::vector<std::shared_ptr<base_handle>>, node>
 {
     static constexpr property_reduce reduce = property_reduce::append;
@@ -73,6 +74,17 @@ operator""_np_class_def(const char* _str, std::size_t _len)
 {
     return property_literal<NP_class_def>{ std::string(_str, _len) };
 }
+
+// Typed class_def& in a deduced pack keys as NP_class_def (see graph::normalize_new_object_arg).
+// Prefer passing the class_def object over a stringly-typed "Name"_np_class_def when you have it.
+class class_def;
+namespace detail {
+template<>
+struct deduced_property_key<class_def>
+{
+    using type = NP_class_def;
+};
+} // namespace detail
 
 // NP_time_tick is property for node time tick
 

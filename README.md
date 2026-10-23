@@ -25,12 +25,13 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 ## Example 1: Flowchart (using int as handle)
 
 Create a flowchart with `int` handles. Properties are applied in one deduced pack
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`); each owning
-property may appear **at most once** in a `new_object` / `>>` pack (duplicate
-`OP_name` / `NP_shape` / `LP_style` / `LP_activate` is a compile error). Sequential
-`.set()` after create is still fine for later mutation. Edges are **one-shot**:
-write the full `a >> props >> b` expression (no bare `std::string` / `const char*`
-on `>>` — literals use `"..."_op_name`, runtime names use `label{}`).
+(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or a `class_def&`
+for typed `NP_class_def` bind); each owning property may appear **at most once** in a
+`new_object` / `>>` pack (duplicate `OP_name` / `NP_shape` / `LP_style` / `LP_activate`
+is a compile error). Sequential `.set()` after create is still fine for later mutation.
+Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
+`std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
+`label{}`).
 
 ```cpp
 #include "periscope.h"
@@ -195,51 +196,68 @@ gantt
     Test : 15:30, 17:00
 ```
 
-## Example 4: Take snapshots to illustrate active test switching.
+## Example 4: classDef, subgraph, and sequence notes
 
-```mermaid
-flowchart TD
+`class_def&` in a `new_object<node>` pack binds `NP_class_def` from the definition's
+`OP_name` (prefer this over stringly-typed `"Name"_np_class_def` when the object is in
+scope). Vector-of-handle props take `property_literal<Prop>{ node_a, node_b }` — no
+`.get_handle()` at the call site (`NP_subgraph_node`, `MNP_basis`).
 
-classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-1@{ shape: rect, label: Texture Test }
-class 1 ActTypeClass
+```cpp
+#include "periscope.h"
+#include <iostream>
+
+int main() {
+    using namespace periscope;
+
+    graph flow;
+    flow.set(GP_type<>::k_flowchart)
+        .set(GP_output_format<>::k_markdown)
+        .set(GP_flowchart_direction<>::k_top_to_down);
+
+    class_def& style = flow.new_object<class_def>(
+        "GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+
+    node& a = flow.new_object<node>("A"_op_name, NP_shape::k_rectangle);
+    node& b = flow.new_object<node>("B"_op_name, NP_shape::k_rectangle);
+    node& c = flow.new_object<node>("C"_op_name, NP_shape::k_rectangle);
+    flow.new_object<node>("Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, style);
+
+    std::cout << flow.to_string() << std::endl;
+
+    graph seq;
+    seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
+    node& client = seq.new_object<node>("Client"_op_name);
+    node& server = seq.new_object<node>("Server"_op_name);
+    seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
+    seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
+
+    std::cout << seq.to_string() << std::endl;
+    return 0;
+}
 ```
 
---------------- Next graph -----------------
+**Output:**
+
 ```mermaid
 flowchart TD
+classDef GroupStyleClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+0@{ shape: rect, label: A }
+1@{ shape: rect, label: B }
+2@{ shape: rect, label: C }
+subgraph 3["Group"]
+0
+1
+2
+end
 
-classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-1@{ shape: rect, label: Texture Test }
-2@{ shape: rect, label: Blender Test Scene }
-1 --> 2
-class 2 ActTypeClass
+class 3 GroupStyleClass
 ```
 
---------------- Next graph -----------------
 ```mermaid
-flowchart TD
-
-classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-1@{ shape: rect, label: Texture Test }
-2@{ shape: rect, label: Blender Test Scene }
-4@{ shape: rect, label: Advanced GLSL }
-1 --> 2
-2 --> 4
-class 4 ActTypeClass
-```
-
---------------- Next graph -----------------
-```mermaid
-flowchart TD
-
-classDef ActTypeClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-1@{ shape: rect, label: Texture Test }
-2@{ shape: rect, label: Blender Test Scene }
-4@{ shape: rect, label: Advanced GLSL }
-6@{ shape: rect, label: Spline Movement }
-1 --> 2
-2 --> 4
-4 --> 6
-class 6 ActTypeClass
+sequenceDiagram
+participant 0 as Client
+participant 1 as Server
+Note over 0, 1 : shared context
+Note right of 0 : on client
 ```

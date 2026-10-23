@@ -14,10 +14,29 @@
 #include "type_hash/periscope_type_hash.h"
 #include <format>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
+
+namespace detail {
+// Normalize deduced new_object / new_object_at args. class_def& becomes
+// property_literal<NP_class_def> from its OP_name — typed bind, no stringly name.
+template<typename t>
+decltype(auto)
+normalize_new_object_arg(t&& _arg)
+{
+    using raw = std::remove_cvref_t<t>;
+    if constexpr (std::is_same_v<raw, class_def>) {
+        if (!_arg.template has<OP_name>())
+            throw std::runtime_error("periscope: class_def used as NP_class_def requires OP_name");
+        return property_literal<NP_class_def>{ _arg.template get<OP_name>().Value };
+    } else {
+        return std::forward<t>(_arg);
+    }
+}
+} // namespace detail
 
 // graph is container for nodes and links with graph type management
 template<typename underlying_type>
@@ -201,10 +220,12 @@ class graph
 
   public:
     // new_object creates an object and optionally applies deduced properties in one call,
-    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
+    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, start_class) where
+    // start_class is a class_def& (typed NP_class_def bind; "Start"_np_class_def still works).
     // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
     // NP_shape / … is a compile error. Append-strategy (vector) props may repeat; chunks
     // concatenate via apply_pack_arg (sequential .set() still assigns / replaces).
+    // Vector-of-handle props accept property_literal<Prop>{ node_a, node_b } (no .get_handle()).
     template<typename t, typename... args>
     t& new_object(args&&... _args)
     {
@@ -218,7 +239,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
-        (ref.apply_pack_arg(std::forward<args>(_args)), ...);
+        (ref.apply_pack_arg(detail::normalize_new_object_arg(std::forward<args>(_args))), ...);
         return ref;
     }
 
@@ -261,7 +282,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
-        (ref.apply_pack_arg(std::forward<args>(_args)), ...);
+        (ref.apply_pack_arg(detail::normalize_new_object_arg(std::forward<args>(_args))), ...);
         return ref;
     }
 
