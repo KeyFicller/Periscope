@@ -26,13 +26,6 @@ class link_owner
     ~link_owner() = default;
 };
 
-// label is a tag carrying a runtime link label, e.g. `a >> label{msg} >> b`
-// (literals prefer "Yes"_op_name; no parallel property_literal factory)
-struct label
-{
-    std::string Value;
-};
-
 // pending_link is an edge whose source is known and whose target is still missing.
 // Decorations are type-erased setters applied to the created link (any deduced link property).
 // Incomplete chains (no destination node) must not be discarded: [[nodiscard]] + consume-on-connect.
@@ -168,8 +161,8 @@ concept link_property_literal =
 // and fails: [[nodiscard]] at compile time, logic_error if forced through (void).
 template<typename t>
 concept link_decoration =
-  link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label> ||
-  std::is_convertible_v<t, const char*>;
+  link_property_enum<t> || link_property_literal<t> ||
+  std::is_same_v<std::remove_cvref_t<t>, std::string> || std::is_convertible_v<t, const char*>;
 
 // ---- pending edge decorations (any deduced link property / UDL) ----
 
@@ -192,9 +185,10 @@ operator>>(pending_link _pending, lit _literal)
 }
 
 inline pending_link
-operator>>(pending_link _pending, label _label)
+operator>>(pending_link _pending, std::string _label)
 {
-    return std::move(_pending) >> property_literal<OP_name>{ std::move(_label.Value) };
+    // Runtime OP_name on >> (literals prefer "Yes"_op_name; no parallel label{} / factory)
+    return std::move(_pending) >> property_literal<OP_name>{ std::move(_label) };
 }
 
 inline pending_link

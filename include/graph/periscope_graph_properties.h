@@ -27,16 +27,24 @@ struct is_graph_property_tag<graph_property_tag<prop>> : std::true_type
 template<typename underlying_type>
 struct GP_type;
 
-// GP_sequence_show_number is property for whether to show sequence number
-template<typename underlying_type>
-struct GP_sequence_show_number : base_property<bool, graph<underlying_type>>
+// GP_sequence_show_number: nested enum + set(enum) like NP_shape / GP_date_format (not raw bool)
+template<typename underlying_type = int>
+struct GP_sequence_show_number : base_property<enum_type, graph<underlying_type>>
 {
     using parent_properties = type_list<GP_type<underlying_type>>;
+
+    enum show_number : enum_type
+    {
+        k_off = 0,
+        k_on = 1,
+    };
+    friend graph_property_tag<GP_sequence_show_number> periscope_property_of(show_number) { return {}; }
+
     static std::string to_string(const GP_sequence_show_number& _property, graph_type _graph_type = io().GraphType)
     {
         switch (_graph_type) {
             case graph_type::k_sequence:
-                return _property.template base_property<bool, graph<underlying_type>>::Value ? "autonumber" : "";
+                return _property.Value == show_number::k_on ? "autonumber" : "";
             default:
                 return "";
         }

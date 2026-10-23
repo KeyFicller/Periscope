@@ -96,6 +96,8 @@ public:
         handle<const void*> this_handle(reinterpret_cast<const void*>(this));
         handle<const void*> target_handle(reinterpret_cast<const void*>(target));
         
+        // new_object_at takes the same deduced property pack as new_object;
+        // runtime strings keep explicit set<OP_name> (no property_literal factory).
         if (!registered[this]) {
             hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
             registered[this] = true;
@@ -104,16 +106,16 @@ public:
             hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
             registered[target] = true;
         }
-        
-        // Runtime message text via label{}; literals would use "..."_op_name
-        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
+
+        // Runtime message: std::string on >> as OP_name (literals: "..."_op_name)
+        hook_graph.access<node>(this_handle) >> msg >> hook_graph.access<node>(target_handle);
     }
     
     static void print_graph() {
         auto& hook_graph = get_hook_graph();
         hook_graph.set(GP_type<>::k_sequence)
                   .set(GP_output_format<>::k_markdown)
-                  .template set<GP_sequence_show_number>(true);
+                  .set(GP_sequence_show_number<>::k_on);
         std::cout << hook_graph.to_string() << std::endl;
     }
 };
