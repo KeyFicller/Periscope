@@ -75,13 +75,13 @@ class Service
             registered[target] = true;
         }
 
-        // Runtime message: std::string sits on >> as OP_name (literals: "..."_op_name)
+        // Runtime message via explicit label{}; literals prefer "..."_op_name
         auto& src = hook_graph.access<node>(this_handle);
         auto& dst = hook_graph.access<node>(target_handle);
         if (activate_target)
-            src >> LP_activate::k_activate >> msg >> dst;
+            src >> LP_activate::k_activate >> label{ msg } >> dst;
         else
-            src >> msg >> dst;
+            src >> label{ msg } >> dst;
     }
 
     static void print_graph()

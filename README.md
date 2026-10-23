@@ -107,8 +107,8 @@ public:
             registered[target] = true;
         }
 
-        // Runtime message: std::string on >> as OP_name (literals: "..."_op_name)
-        hook_graph.access<node>(this_handle) >> msg >> hook_graph.access<node>(target_handle);
+        // Runtime message via explicit label{}; literals prefer "..."_op_name
+        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
     }
     
     static void print_graph() {
