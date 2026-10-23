@@ -51,9 +51,10 @@ struct normalize_link_decoration<label>
 };
 } // namespace detail
 
-// pending_link is a typed incomplete edge: source known, decorations stored as a heterogeneous
-// pack (no std::function type erasure). Each `>> decoration` appends to the pack and changes
-// the pending_link instantiation. Incomplete chains must not be discarded:
+// pending_link is a typed incomplete edge used only as a temporary in a one-shot `>>` chain
+// (`a >> deco >> … >> b`). Decorations are a heterogeneous pack (no std::function erasure);
+// each `>> deco` appends and changes the instantiation. Not a supported DX path to name and
+// complete later — only rvalue overloads exist. Incomplete chains must not be discarded:
 // [[nodiscard]] + consume-on-connect + destructor abort if still live.
 template<typename... decorations>
 struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b)")]] pending_link
@@ -195,8 +196,8 @@ concept link_property_literal =
 // link_decoration lists what may sit between two nodes in a `>>` chain.
 // Bare std::string / const char* are intentionally excluded (ambiguous with other string link
 // props): literals use "..."_op_name; runtime names use label{} or set<OP_name>.
-// A chain that stops on a decoration (no target node) yields a discarded pending_link
-// and fails: [[nodiscard]] at compile time, abort if forced through (void).
+// Edges are one-shot rvalue chains; a chain that stops on a decoration (no target) yields a
+// discarded pending_link and fails: [[nodiscard]] at compile time, abort if forced through (void).
 template<typename t>
 concept link_decoration =
   link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label>;
@@ -217,15 +218,6 @@ operator>>(pending_link<decorations...>&& _pending, deco _decoration)
         std::tuple_cat(std::move(pack),
                        std::make_tuple(detail::normalize_link_decoration<deco>::apply(std::move(_decoration))))
     };
-}
-
-// Named / deferred edges: lvalue pending_link is consumed (moved-from) the same as an rvalue
-template<typename... decorations, typename deco>
-    requires link_decoration<deco>
-auto
-operator>>(pending_link<decorations...>& _pending, deco _decoration)
-{
-    return std::move(_pending) >> std::move(_decoration);
 }
 
 // ---- starting a pending edge from a node or from the end of a chain ----
@@ -253,13 +245,6 @@ link_ref
 operator>>(pending_link<decorations...>&& _pending, node& _target)
 {
     return detail::connect(std::move(_pending), _target); // releases before destroy
-}
-
-template<typename... decorations>
-link_ref
-operator>>(pending_link<decorations...>& _pending, node& _target)
-{
-    return detail::connect(std::move(_pending), _target);
 }
 
 inline link_ref

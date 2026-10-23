@@ -76,16 +76,14 @@ class Service
         }
 
         // Runtime message via explicit label{}; literals prefer "..."_op_name.
-        // Decorations grow a typed pending_link<...> pack (no std::function erasure);
-        // a named pending edge can be completed later (lvalue >> target consumes it).
+        // Decorations grow a typed pending_link<...> pack (no std::function erasure).
+        // Edges are one-shot: `src >> props >> dst` in a single expression (no named/deferred edge).
         auto& src = hook_graph.access<node>(this_handle);
         auto& dst = hook_graph.access<node>(target_handle);
-        if (activate_target) {
-            auto edge = src >> LP_activate::k_activate >> label{ msg };
-            edge >> dst;
-        } else {
+        if (activate_target)
+            src >> LP_activate::k_activate >> label{ msg } >> dst;
+        else
             src >> label{ msg } >> dst;
-        }
     }
 
     static void print_graph()
