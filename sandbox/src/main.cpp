@@ -8,52 +8,45 @@ using namespace periscope;
 void
 example1_flowchart()
 {
-    graph<int> _graph;
-    _graph.set<OP_name>("Hello");
+    graph _graph;
+    _graph.set("Hello"_op_name);
 
     // Create class definitions
     class_def& start_class = _graph.new_object<class_def>();
-    start_class.set<OP_name>("Start").set<MCD_fill>("#4A90E2").set<MCD_stroke>("#2E5C8A").set<MCD_color>("#fff");
+    start_class.set("Start"_op_name).set<MCD_fill>("#4A90E2").set<MCD_stroke>("#2E5C8A").set<MCD_color>("#fff");
 
     class_def& process_class = _graph.new_object<class_def>();
-    process_class.set<OP_name>("Process").set<MCD_fill>("#F5A623").set<MCD_stroke>("#C97E1C").set<MCD_color>("#fff");
+    process_class.set("Process"_op_name).set<MCD_fill>("#F5A623").set<MCD_stroke>("#C97E1C").set<MCD_color>("#fff");
 
     class_def& decision_class = _graph.new_object<class_def>();
-    decision_class.set<OP_name>("Decision").set<MCD_fill>("#7ED321").set<MCD_stroke>("#5FA319").set<MCD_color>("#fff");
+    decision_class.set("Decision"_op_name).set<MCD_fill>("#7ED321").set<MCD_stroke>("#5FA319").set<MCD_color>("#fff");
 
     class_def& end_class = _graph.new_object<class_def>();
-    end_class.set<OP_name>("End").set<MCD_fill>("#D0021B").set<MCD_stroke>("#A00115").set<MCD_color>("#fff");
+    end_class.set("End"_op_name).set<MCD_fill>("#D0021B").set<MCD_stroke>("#A00115").set<MCD_color>("#fff");
 
-    // Create nodes
+    // Create nodes: "_op_name" / "_np_class_def" UDLs mirror OP_/NP_ property names; nested enums deduce NP_shape
     node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Start");
+    start.set("Start"_op_name).set(NP_shape::k_rectangle).set("Start"_np_class_def);
 
     node& process = _graph.new_object<node>();
-    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("Process");
+    process.set("Process Data"_op_name).set(NP_shape::k_rectangle).set("Process"_np_class_def);
 
     node& decision = _graph.new_object<node>();
-    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond).set<NP_class_def>("Decision");
+    decision.set("Decision"_op_name).set(NP_shape::k_diamond).set("Decision"_np_class_def);
 
     node& end = _graph.new_object<node>();
-    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle).set<NP_class_def>("End");
+    end.set("End"_op_name).set(NP_shape::k_rectangle).set("End"_np_class_def);
 
-    // Create links
-    link& link1 = _graph.new_object<link>();
-    link1.set<LP_source>(start).set<LP_target>(process).set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
+    // Link props in the `>>` world — two equivalent patterns:
+    // 1) In-chain decoration: property enums / UDLs between nodes (preferred for labels)
+    start >> process >> decision >> "Yes"_op_name >> end;
+    // 2) Trailing set on the link_ref returned by `>>`
+    (decision >> "No"_op_name >> process).set(LP_style::k_dashed | LP_style::k_arrow_mask);
 
-    link& link2 = _graph.new_object<link>();
-    link2.set<LP_source>(process).set<LP_target>(decision).set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-
-    link& link3 = _graph.new_object<link>();
-    link3.set<LP_source>(decision)
-      .set<LP_target>(end)
-      .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)
-      .set<OP_name>("Yes");
-
-    // Configure graph
-    _graph.template set<GP_type>(graph_type::k_flowchart)
-      .template set<GP_output_format>(graph_output_format::k_markdown)
-      .template set<GP_flowchart_direction>(GP_flowchart_direction<int>::k_top_to_down);
+    // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
+    _graph.set(GP_type<>::k_flowchart)
+      .set(GP_output_format<>::k_markdown)
+      .set(GP_flowchart_direction<>::k_top_to_down);
 
     std::cout << "=== Example 1: Flowchart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -92,17 +85,15 @@ class Service
             registered[target] = true;
         }
 
-        link& req = hook_graph.new_object<link>();
-        auto src_handle = hook_graph.access<node>(this_handle).get_handle();
-        auto dst_handle = hook_graph.access<node>(target_handle).get_handle();
-        req.set<LP_source>(src_handle).set<LP_target>(dst_handle).set<OP_name>(msg);
+        // A sequence message is the same `>>` edge; the label becomes the message text
+        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
     }
 
     static void print_graph()
     {
         auto& hook_graph = get_hook_graph();
-        hook_graph.template set<GP_type>(graph_type::k_sequence)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
+        hook_graph.set(GP_type<>::k_sequence)
+          .set(GP_output_format<>::k_markdown)
           .template set<GP_sequence_show_number>(true);
         std::cout << "=== Example 2: Sequence Diagram ===\n";
         std::cout << hook_graph.to_string() << std::endl;
@@ -129,24 +120,24 @@ example2_sequence()
 void
 example3_gantt()
 {
-    graph<int> _graph;
-    _graph.template set<GP_type>(graph_type::k_gantt)
-      .template set<GP_output_format>(graph_output_format::k_markdown)
-      .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+    graph _graph;
+    _graph.set(GP_type<>::k_gantt)
+      .set(GP_output_format<>::k_markdown)
+      .set(GP_date_format<>::k_hour_minute);
 
     // Three tasks; ticks print zero-padded HH:mm to match dateFormat
     node& design = _graph.new_object<node>();
-    design.set<OP_name>("Design")
+    design.set("Design"_op_name)
       .set<NP_time_tick_start>("9:0"_tick)
       .set<NP_time_tick_end>("12:0"_tick);
 
     node& build = _graph.new_object<node>();
-    build.set<OP_name>("Build")
+    build.set("Build"_op_name)
       .set<NP_time_tick_start>("12:0"_tick)
       .set<NP_time_tick_end>("15:30"_tick);
 
     node& test = _graph.new_object<node>();
-    test.set<OP_name>("Test")
+    test.set("Test"_op_name)
       .set<NP_time_tick_start>("15:30"_tick)
       .set<NP_time_tick_end>("17:0"_tick);
 

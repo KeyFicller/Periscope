@@ -45,6 +45,41 @@ extract_handle(const t& _value)
     }
 };
 
+// property_of_t maps a nested property enum to its owning property via ADL:
+// a property declares hidden friend `friend prop periscope_property_of(enum_name) { return {}; }`
+template<typename e>
+concept property_enum = std::is_enum_v<e> && requires(e _value) { periscope_property_of(_value); };
+
+template<typename e>
+using property_of_t = decltype(periscope_property_of(std::declval<e>()));
+
+// property_literal tags a string with its owning property so set("..."_op_name) deduces OP_name
+template<typename prop>
+struct property_literal
+{
+    using property = prop;
+    std::string Value;
+};
+
+template<typename t>
+struct is_property_literal : std::false_type
+{};
+
+template<typename prop>
+struct is_property_literal<property_literal<prop>> : std::true_type
+{};
+
+template<typename t>
+concept property_literal_value = is_property_literal<std::remove_cvref_t<t>>::value;
+
+// ADL hook so property_of_t also works for property_literal (returns the property type)
+template<typename prop>
+prop
+periscope_property_of(const property_literal<prop>&)
+{
+    return {};
+}
+
 // base_property is base class for all properties
 template<typename value_type, typename owner>
 struct base_property
@@ -62,9 +97,17 @@ struct OP_name : base_property<std::string, base_object>
 {
     static std::string to_string(const OP_name& _property, graph_type _graph_type = io().GraphType)
     {
+        (void)_graph_type;
         return _property.Value;
     }
 };
+
+// "Start"_op_name -> property_literal<OP_name> (OP_ = object_property)
+inline property_literal<OP_name>
+operator""_op_name(const char* _str, std::size_t _len)
+{
+    return property_literal<OP_name>{ std::string(_str, _len) };
+}
 
 // OP_printable is property for whether object is printable
 struct OP_printable : base_property<bool, base_object>

@@ -15,3 +15,4 @@
 #include "node/periscope_node_properties.h"
 #include "tools/periscope_guard.h"
 #include "tools/periscope_nested_map_op.h"
+#include "link/periscope_link_operators.h"

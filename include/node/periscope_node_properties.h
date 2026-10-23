@@ -23,6 +23,7 @@ struct NP_shape : base_property<enum_type, node>
         k_diamond,
         k_parallelogram,
     };
+    friend NP_shape periscope_property_of(shape) { return {}; }
 
     // to_string is to convert property to string representation
     static std::string to_string(const NP_shape& _property, graph_type _graph_type = io().GraphType)
@@ -59,9 +60,17 @@ struct NP_class_def : base_property<std::string, node>
     // to_string is to convert property to string representation
     static std::string to_string(const NP_class_def& _property, graph_type _graph_type = io().GraphType)
     {
+        (void)_graph_type;
         return _property.Value;
     }
 };
+
+// "Start"_np_class_def -> property_literal<NP_class_def> (NP_ = node_property)
+inline property_literal<NP_class_def>
+operator""_np_class_def(const char* _str, std::size_t _len)
+{
+    return property_literal<NP_class_def>{ std::string(_str, _len) };
+}
 
 // NP_time_tick is property for node time tick
 

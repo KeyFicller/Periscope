@@ -9,7 +9,8 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
-template<typename underlying_type>
+// int is the default handle type, so `graph<> g;` and `graph g;` work
+template<typename underlying_type = int>
 class graph;
 
 // base_handle is base class for all handles

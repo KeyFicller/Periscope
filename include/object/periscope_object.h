@@ -12,6 +12,9 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
+// link_owner is the non-template interface of a graph that can create links
+class link_owner;
+
 // base_object is the base class for all objects with property management
 class base_object
 {
@@ -155,12 +158,16 @@ class base_object
 
     std::shared_ptr<base_handle> get_handle() const { return m_handle; }
 
+    // owner is the graph that created this object (nullptr if created standalone)
+    link_owner* owner() const { return m_owner; }
+
   private:
     std::map<type_hash_result, std::any> m_properties;
     template<typename underlying_type>
     friend class graph;
 
     std::shared_ptr<base_handle> m_handle;
+    link_owner* m_owner = nullptr;
 };
 
 // object is CRTP base class for typed objects with property management
@@ -190,6 +197,22 @@ class object : public base_object
                       "Owner must be a derived class of prop::owner_type");
         get_or_create<prop>().Value = _value.get_handle();
         return *this;
+    }
+
+    // set overload: deduce the property from a nested property enum, e.g. set(NP_shape::k_diamond)
+    template<typename e>
+        requires property_enum<e> && requires { typename property_of_t<e>::type; }
+    object& set(e _value)
+    {
+        return set<property_of_t<e>>(static_cast<typename property_of_t<e>::type>(_value));
+    }
+
+    // set overload: deduce the property from a string UDL, e.g. set("Start"_op_name)
+    template<typename lit>
+        requires property_literal_value<lit>
+    object& set(lit _literal)
+    {
+        return set<typename std::remove_cvref_t<lit>::property>(std::move(_literal.Value));
     }
 
   public:

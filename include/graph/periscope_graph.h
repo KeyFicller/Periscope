@@ -3,6 +3,7 @@
 #include "graph/periscope_graph_fwd.h"
 #include "graph/periscope_graph_properties.h"
 #include "link/periscope_link.h"
+#include "link/periscope_link_operators.h"
 #include "misc/periscope_class_def.h"
 #include "misc/periscope_note.h"
 #include "node/periscope_node.h"
@@ -20,13 +21,15 @@ namespace periscope {
 
 // graph is container for nodes and links with graph type management
 template<typename underlying_type>
-class graph : public object<graph<underlying_type>>
+class graph
+  : public object<graph<underlying_type>>
+  , public link_owner
 {
   public:
     graph()
     {
         // default type is flowchart
-        this->template set<GP_type>(graph_type::k_flowchart);
+        this->set(GP_type<underlying_type>::k_flowchart);
         this->template set<OP_printable>(true);
     }
 
@@ -35,7 +38,7 @@ class graph : public object<graph<underlying_type>>
     {
         if (!this->template has<GP_type<underlying_type>>())
             throw std::runtime_error("Graph type not set, please set it before calling to_string");
-        io().GraphType = this->template get<GP_type<underlying_type>>().Value;
+        io().GraphType = static_cast<graph_type>(this->template get<GP_type<underlying_type>>().Value);
         return object<graph<underlying_type>>::to_string();
     }
 
@@ -52,6 +55,26 @@ class graph : public object<graph<underlying_type>>
         return *this;
     }
 
+    // set overload: deduce a graph property from its nested enum, e.g. set(GP_date_format<>::k_hour_minute)
+    template<typename e>
+        requires property_enum<e> && is_graph_property_tag<property_of_t<e>>::value
+    graph& set(e _value)
+    {
+        return set_from_tag(property_of_t<e>{}, static_cast<enum_type>(_value));
+    }
+
+    // create_link is implementation of link_owner::create_link
+    link& create_link() override { return new_object<link>(); }
+
+  private:
+    template<template<typename> class prop>
+    graph& set_from_tag(graph_property_tag<prop>, enum_type _value)
+    {
+        return set<prop>(static_cast<typename prop<underlying_type>::type>(_value));
+    }
+
+  public:
+
   public:
     // to_string_impl is implementation of object::to_string_impl
     std::string to_string_impl(graph_type _graph_type = io().GraphType) const
@@ -60,7 +83,8 @@ class graph : public object<graph<underlying_type>>
 
         graph_output_format output_format = graph_output_format::k_markdown;
         if (this->template has<GP_output_format<underlying_type>>())
-            output_format = this->template get<GP_output_format<underlying_type>>().Value;
+            output_format = static_cast<graph_output_format>(
+              this->template get<GP_output_format<underlying_type>>().Value);
 
         switch (output_format) {
             case graph_output_format::k_markdown:
@@ -189,6 +213,7 @@ class graph : public object<graph<underlying_type>>
         t& ref = *ptr;
         m_elements.push_back(std::move(ptr));
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
+        ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
         return ref;
     }
@@ -225,6 +250,7 @@ class graph : public object<graph<underlying_type>>
         m_elements.push_back(std::move(ptr));
         m_handle_manager.allocate_at(_handle);
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
+        ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
         return ref;
     }
