@@ -72,6 +72,12 @@ operator""_np_class_def(const char* _str, std::size_t _len)
     return property_literal<NP_class_def>{ std::string(_str, _len) };
 }
 
+inline property_literal<NP_class_def>
+np_class_def(std::string _value)
+{
+    return property_literal<NP_class_def>{ std::move(_value) };
+}
+
 // NP_time_tick is property for node time tick
 
 // It's meaning depends on the graph type
@@ -124,5 +130,18 @@ inline property_literal<NP_time_tick_end>
 operator""_np_time_tick_end(const char* _str, std::size_t _len)
 {
     return property_literal<NP_time_tick_end>{ operator""_tick(_str, _len) };
+}
+
+// Runtime ticks: UDLs need string literals; variables use the same deduced set()/new_object path
+inline property_literal<NP_time_tick_start>
+np_time_tick_start(data_tick _tick)
+{
+    return property_literal<NP_time_tick_start>{ _tick };
+}
+
+inline property_literal<NP_time_tick_end>
+np_time_tick_end(data_tick _tick)
+{
+    return property_literal<NP_time_tick_end>{ _tick };
 }
 } // namespace periscope
