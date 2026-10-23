@@ -81,6 +81,39 @@ periscope_property_of(const property_literal<prop>&)
     return {};
 }
 
+namespace detail {
+// Owning property key for a deduced set()/new_object argument (UDL or nested enum).
+// Uniqueness is by property type (OP_name / NP_shape / …), not by value.
+template<typename arg>
+struct deduced_property_key;
+
+template<typename prop>
+struct deduced_property_key<property_literal<prop>>
+{
+    using type = prop;
+};
+
+template<typename e>
+    requires property_enum<e>
+struct deduced_property_key<e>
+{
+    using type = property_of_t<e>;
+};
+
+template<typename arg>
+using deduced_property_key_t = typename deduced_property_key<std::remove_cvref_t<arg>>::type;
+
+// Pack-level uniqueness: sizeof...(props) vs unique deduced keys (type_list_unique).
+// No per-Prop helper — operate on the pack directly (shared by new_object / >>).
+template<typename... props>
+inline constexpr bool owning_properties_unique_v =
+  sizeof...(props) == type_list_unique_t<type_list<props...>>::size;
+
+template<typename... args>
+inline constexpr bool deduced_args_unique_v =
+  owning_properties_unique_v<deduced_property_key_t<args>...>;
+} // namespace detail
+
 // base_property is base class for all properties
 template<typename value_type, typename owner>
 struct base_property
