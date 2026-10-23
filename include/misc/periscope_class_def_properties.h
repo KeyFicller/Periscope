@@ -35,4 +35,23 @@ struct MCD_color : public base_property<std::string, class_def>
         return "color:" + _property.Value + ",";
     }
 };
+
+// "#fff"_mcd_fill / _stroke / _color -> property_literal so set()/new_object deduce MCD_*
+inline property_literal<MCD_fill>
+operator""_mcd_fill(const char* _str, std::size_t _len)
+{
+    return property_literal<MCD_fill>{ std::string(_str, _len) };
+}
+
+inline property_literal<MCD_stroke>
+operator""_mcd_stroke(const char* _str, std::size_t _len)
+{
+    return property_literal<MCD_stroke>{ std::string(_str, _len) };
+}
+
+inline property_literal<MCD_color>
+operator""_mcd_color(const char* _str, std::size_t _len)
+{
+    return property_literal<MCD_color>{ std::string(_str, _len) };
+}
 }

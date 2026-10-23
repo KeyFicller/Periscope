@@ -159,25 +159,15 @@ formatted to match `GP_date_format` (zero-padded `HH:mm` or `MM-DD`):
 int main() {
     using namespace periscope;
 
-    graph<int> _graph;
-    _graph.template set<GP_type>(graph_type::k_gantt)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_date_format>(GP_date_format<int>::k_hour_minute);
+    graph _graph;
+    _graph.set(GP_type<>::k_gantt)
+          .set(GP_output_format<>::k_markdown)
+          .set(GP_date_format<>::k_hour_minute);
 
-    node& design = _graph.new_object<node>();
-    design.set<OP_name>("Design")
-          .set<NP_time_tick_start>("9:0"_tick)
-          .set<NP_time_tick_end>("12:0"_tick);
-
-    node& build = _graph.new_object<node>();
-    build.set<OP_name>("Build")
-         .set<NP_time_tick_start>("12:0"_tick)
-         .set<NP_time_tick_end>("15:30"_tick);
-
-    node& test = _graph.new_object<node>();
-    test.set<OP_name>("Test")
-        .set<NP_time_tick_start>("15:30"_tick)
-        .set<NP_time_tick_end>("17:0"_tick);
+    // Pack name + ticks via deduced UDLs (mirrors OP_/NP_ naming)
+    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
+    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
+    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
 
     std::cout << _graph.to_string() << std::endl;
     return 0;

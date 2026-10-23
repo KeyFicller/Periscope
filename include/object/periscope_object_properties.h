@@ -53,12 +53,13 @@ concept property_enum = std::is_enum_v<e> && requires(e _value) { periscope_prop
 template<typename e>
 using property_of_t = decltype(periscope_property_of(std::declval<e>()));
 
-// property_literal tags a string with its owning property so set("..."_op_name) deduces OP_name
+// property_literal tags a value with its owning property so set("..."_op_name) /
+// set("9:0"_np_time_tick_start) deduce the property without an explicit template arg
 template<typename prop>
 struct property_literal
 {
     using property = prop;
-    std::string Value;
+    typename prop::type Value;
 };
 
 template<typename t>
