@@ -84,14 +84,63 @@ in one `new_object` pack fold by concatenating; scalars stay unique. Tag chunks 
 still replaces.
 
 ```cpp
-node& a = g.new_object<node>("A"_op_name, NP_shape::k_rectangle);
-node& b = g.new_object<node>("B"_op_name, NP_shape::k_rectangle);
-node& group = g.new_object<node>(
-    "Group"_op_name,
-    property_literal<NP_subgraph_node>{ { a.get_handle() } },
-    property_literal<NP_subgraph_node>{ { b.get_handle() } }); // append → {a, b}
+#include "periscope.h"
+#include <iostream>
 
-// group.set<NP_subgraph_node>(…) still replaces the whole vector
+int main() {
+    using namespace periscope;
+
+    graph g;
+    g.set(GP_type<>::k_flowchart)
+     .set(GP_output_format<>::k_markdown)
+     .set(GP_flowchart_direction<>::k_top_to_down);
+
+    node& a = g.new_object<node>("A"_op_name, NP_shape::k_rectangle);
+    node& b = g.new_object<node>("B"_op_name, NP_shape::k_rectangle);
+    node& group = g.new_object<node>(
+        "Group"_op_name,
+        property_literal<NP_subgraph_node>{ { a.get_handle() } },
+        property_literal<NP_subgraph_node>{ { b.get_handle() } }); // append → {a, b}
+
+    // group.set<NP_subgraph_node>(…) still replaces the whole vector
+    std::cout << g.to_string() << std::endl;
+    return 0;
+}
+```
+
+**Output:**
+
+```mermaid
+flowchart TD
+0@{ shape: rect, label: A }
+1@{ shape: rect, label: B }
+subgraph 2["Group"]
+0
+1
+end
+```
+
+Same append reduce for sequence notes (`MNP_basis`):
+
+```cpp
+graph seq;
+seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
+node& client = seq.new_object<node>("Client"_op_name);
+node& server = seq.new_object<node>("Server"_op_name);
+seq.new_object<note>("shared context"_op_name,
+                     property_literal<MNP_basis>{ { client.get_handle() } },
+                     property_literal<MNP_basis>{ { server.get_handle() } });
+std::cout << seq.to_string() << std::endl;
+```
+
+**Output:**
+
+```mermaid
+sequenceDiagram
+
+participant OBJ0 as Client
+participant OBJ1 as Server
+Note over OBJ0, OBJ1 : shared context
 ```
 
 ## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)
