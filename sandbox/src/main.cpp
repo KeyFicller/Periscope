@@ -23,11 +23,13 @@ example1_flowchart()
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
 
-    // Link props in the `>>` world — two equivalent patterns:
-    // 1) In-chain decoration: property enums / UDLs between nodes (preferred for labels)
+    // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)):
+    // composed LP_style::*_*_arrow avoids `k_dashed | k_arrow_mask` and trailing .set()
     start >> process >> decision >> "Yes"_op_name >> end;
-    // 2) Trailing set on the link_ref returned by `>>`
-    (decision >> "No"_op_name >> process).set(LP_style::k_dashed | LP_style::k_arrow_mask);
+    // Incomplete chain (no destination) is rejected: pending_link is [[nodiscard]] and its
+    // destructor aborts if never connected — e.g. the following would fail, not silently drop:
+    //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
+    decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
     // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
     _graph.set(GP_type<>::k_flowchart)
@@ -54,7 +56,7 @@ class Service
         return hook_graph;
     }
 
-    void send_request(Service* target, const std::string& msg)
+    void send_request(Service* target, const std::string& msg, bool activate_target = false)
     {
         auto& hook_graph = get_hook_graph();
         static std::map<const void*, bool> registered;
@@ -71,8 +73,13 @@ class Service
             registered[target] = true;
         }
 
-        // A sequence message is the same `>>` edge; the label becomes the message text
-        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
+        // Sequence message: runtime label via label{}; activation via nested LP_activate enum
+        auto& src = hook_graph.access<node>(this_handle);
+        auto& dst = hook_graph.access<node>(target_handle);
+        if (activate_target)
+            src >> LP_activate::k_activate >> label{ msg } >> dst;
+        else
+            src >> label{ msg } >> dst;
     }
 
     static void print_graph()
@@ -93,9 +100,9 @@ example2_sequence()
     Service server("Server");
     Service database("Database");
 
-    // Business logic triggers hooks
-    client.send_request(&server, "Request Data");
-    server.send_request(&database, "Query");
+    // Business logic triggers hooks (activate server / database on the request path)
+    client.send_request(&server, "Request Data", true);
+    server.send_request(&database, "Query", true);
     database.send_request(&server, "Result");
     server.send_request(&client, "Response");
 
