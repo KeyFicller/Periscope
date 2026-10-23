@@ -53,7 +53,7 @@ concept property_enum = std::is_enum_v<e> && requires(e _value) { periscope_prop
 template<typename e>
 using property_of_t = decltype(periscope_property_of(std::declval<e>()));
 
-// property_literal tags a string with its owning property so set("..."_name) deduces OP_name
+// property_literal tags a string with its owning property so set("..."_op_name) deduces OP_name
 template<typename prop>
 struct property_literal
 {
@@ -102,9 +102,9 @@ struct OP_name : base_property<std::string, base_object>
     }
 };
 
-// "Start"_name -> property_literal<OP_name>, so set("Start"_name) deduces OP_name
+// "Start"_op_name -> property_literal<OP_name> (OP_ = object_property)
 inline property_literal<OP_name>
-operator""_name(const char* _str, std::size_t _len)
+operator""_op_name(const char* _str, std::size_t _len)
 {
     return property_literal<OP_name>{ std::string(_str, _len) };
 }

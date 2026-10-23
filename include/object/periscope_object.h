@@ -207,7 +207,7 @@ class object : public base_object
         return set<property_of_t<e>>(static_cast<typename property_of_t<e>::type>(_value));
     }
 
-    // set overload: deduce the property from a string UDL, e.g. set("Start"_name)
+    // set overload: deduce the property from a string UDL, e.g. set("Start"_op_name)
     template<typename lit>
         requires property_literal_value<lit>
     object& set(lit _literal)

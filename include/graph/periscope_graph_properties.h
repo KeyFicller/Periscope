@@ -43,20 +43,12 @@ struct GP_sequence_show_number : base_property<bool, graph<underlying_type>>
     }
 };
 
-// GP_type is property for graph type (nested enum aligned with freestanding graph_type)
+// GP_type is property for graph type; chart_type lives once in GP_type_base
 template<typename underlying_type = int>
-struct GP_type : base_property<enum_type, graph<underlying_type>>
+struct GP_type
+  : base_property<enum_type, graph<underlying_type>>
+  , GP_type_base
 {
-    // Values aligned with graph_type in periscope_graph_fwd.h.
-    // Named chart_type (not `type`) so it does not shadow base_property::type.
-    enum chart_type : enum_type
-    {
-        k_flowchart = 0,
-        k_sequence = 1,
-        k_gantt = 2,
-    };
-    friend graph_property_tag<GP_type> periscope_property_of(chart_type) { return {}; }
-
     using child_properties = type_list<GP_sequence_show_number<underlying_type>>;
 
     static std::string to_string(const GP_type& _property, graph_type _graph_type = io().GraphType)
@@ -75,18 +67,26 @@ struct GP_type : base_property<enum_type, graph<underlying_type>>
     }
 };
 
-// GP_output_format is property for graph output format (nested enum aligned with freestanding)
-template<typename underlying_type = int>
-struct GP_output_format : base_property<enum_type, graph<underlying_type>>
+// Free function (not a hidden friend of GP_type): chart_type is nested in GP_type_base,
+// so ADL only associates GP_type_base / namespace periscope — not the template.
+inline graph_property_tag<GP_type>
+periscope_property_of(GP_type_base::chart_type)
 {
-    // Values aligned with graph_output_format in periscope_graph_fwd.h
-    enum output_format : enum_type
-    {
-        k_mermaid = 0,
-        k_markdown = 1,
-    };
-    friend graph_property_tag<GP_output_format> periscope_property_of(output_format) { return {}; }
-};
+    return {};
+}
+
+// GP_output_format is property for output format; output_format lives once in GP_output_format_base
+template<typename underlying_type = int>
+struct GP_output_format
+  : base_property<enum_type, graph<underlying_type>>
+  , GP_output_format_base
+{};
+
+inline graph_property_tag<GP_output_format>
+periscope_property_of(GP_output_format_base::output_format)
+{
+    return {};
+}
 
 // GP_flowchart_direction is property for graph flowchart direction
 template<typename underlying_type = int>

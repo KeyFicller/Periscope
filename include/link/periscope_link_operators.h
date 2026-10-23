@@ -23,7 +23,7 @@ class link_owner
     ~link_owner() = default;
 };
 
-// label is a tag carrying a link label, e.g. `a >> label{"Yes"} >> b` (prefer "Yes"_name)
+// label is a tag carrying a link label, e.g. `a >> label{"Yes"} >> b` (prefer "Yes"_op_name)
 struct label
 {
     std::string Value;
@@ -123,7 +123,7 @@ concept link_applicable_property = requires { typename prop::owner_type; } &&
 template<typename e>
 concept link_property_enum = property_enum<e> && detail::link_applicable_property<property_of_t<e>>;
 
-// String UDLs whose owning property applies to link (e.g. "Yes"_name -> OP_name)
+// String UDLs whose owning property applies to link (e.g. "Yes"_op_name -> OP_name)
 template<typename lit>
 concept link_property_literal =
   property_literal_value<lit> && detail::link_applicable_property<typename std::remove_cvref_t<lit>::property>;
@@ -163,7 +163,7 @@ operator>>(pending_link _pending, label _label)
 inline pending_link
 operator>>(pending_link _pending, const char* _label)
 {
-    // Raw C-string sugar for OP_name; preferred form is "Yes"_name
+    // Raw C-string sugar for OP_name; preferred form is "Yes"_op_name
     return std::move(_pending) >> property_literal<OP_name>{ _label };
 }
 

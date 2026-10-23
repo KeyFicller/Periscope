@@ -65,9 +65,9 @@ struct NP_class_def : base_property<std::string, node>
     }
 };
 
-// "Start"_class -> property_literal<NP_class_def>, so set("Start"_class) deduces NP_class_def
+// "Start"_np_class_def -> property_literal<NP_class_def> (NP_ = node_property)
 inline property_literal<NP_class_def>
-operator""_class(const char* _str, std::size_t _len)
+operator""_np_class_def(const char* _str, std::size_t _len)
 {
     return property_literal<NP_class_def>{ std::string(_str, _len) };
 }
