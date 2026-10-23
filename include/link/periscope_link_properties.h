@@ -31,6 +31,11 @@ struct LP_style : public base_property<enum_type, link>
         k_bold_solid,
 
         k_arrow_mask = 0x100000,
+
+        // Composed styles — first-class nested enumerators so `>>` chains can
+        // write `LP_style::k_dashed_arrow` instead of `k_dashed | k_arrow_mask`.
+        k_solid_arrow = k_solid | k_arrow_mask,
+        k_dashed_arrow = k_dashed | k_arrow_mask,
     };
     friend LP_style periscope_property_of(style) { return {}; }
 
@@ -69,20 +74,33 @@ struct LP_style : public base_property<enum_type, link>
     // to_string_default is to get default string representation
     static std::string to_string_default(graph_type _graph_type = io().GraphType)
     {
-        static LP_style style{ style::k_solid | style::k_arrow_mask };
+        static LP_style style{ style::k_solid_arrow };
         return to_string(style, _graph_type);
     }
 };
 
-struct LP_activate : public base_property<bool, link>
+// LP_activate is sequence activation (+/-); nested enum matches NP_shape / LP_style
+struct LP_activate : public base_property<enum_type, link>
 {
+    enum activation : enum_type
+    {
+        k_deactivate = 0,
+        k_activate = 1,
+    };
+    friend LP_activate periscope_property_of(activation) { return {}; }
+
     // to_string is to convert property to string representation
     static std::string to_string(const LP_activate& _property, graph_type _graph_type = io().GraphType)
     {
-        return _property.Value ? "+" : "-";
+        (void)_graph_type;
+        return _property.Value == activation::k_activate ? "+" : "-";
     }
 
-    // to_string_default is to get default string representation
-    static std::string to_string_default(graph_type _graph_type = io().GraphType) { return ""; }
+    // to_string_default is to get default string representation (unset → no suffix)
+    static std::string to_string_default(graph_type _graph_type = io().GraphType)
+    {
+        (void)_graph_type;
+        return "";
+    }
 };
 }

@@ -41,8 +41,9 @@ int main() {
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
 
-    // operator>> creates links; labels / styles can sit between nodes
+    // operator>> creates links; labels / composed styles sit between nodes
     start >> process >> decision >> "Yes"_op_name >> end;
+    decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
     _graph.set(GP_type<>::k_flowchart)
           .set(GP_output_format<>::k_markdown)
@@ -64,6 +65,7 @@ flowchart TD
 0 --> 1
 1 --> 2
 2 --"Yes"--> 3
+2 -."No".-> 1
 ```
 
 ## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)
@@ -101,16 +103,14 @@ public:
             registered[target] = true;
         }
         
-        link& req = hook_graph.new_object<link>();
-        auto src_handle = hook_graph.access<node>(this_handle).get_handle();
-        auto dst_handle = hook_graph.access<node>(target_handle).get_handle();
-        req.set<LP_source>(src_handle).set<LP_target>(dst_handle).set<OP_name>(msg);
+        // Runtime message text via label{}; literals would use "..."_op_name
+        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
     }
     
     static void print_graph() {
         auto& hook_graph = get_hook_graph();
-        hook_graph.template set<GP_type>(graph_type::k_sequence)
-                  .template set<GP_output_format>(graph_output_format::k_markdown)
+        hook_graph.set(GP_type<>::k_sequence)
+                  .set(GP_output_format<>::k_markdown)
                   .template set<GP_sequence_show_number>(true);
         std::cout << hook_graph.to_string() << std::endl;
     }

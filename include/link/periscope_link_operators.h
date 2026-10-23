@@ -23,16 +23,11 @@ class link_owner
     ~link_owner() = default;
 };
 
-// label is a tag carrying a link label, e.g. `a >> label{"Yes"} >> b` (prefer "Yes"_op_name)
+// label is a tag carrying a runtime link label, e.g. `a >> label{msg} >> b`
+// (literals prefer "Yes"_op_name; no parallel property_literal factory)
 struct label
 {
     std::string Value;
-};
-
-// activate is a tag for sequence activation, e.g. `a >> activate{true} >> b`
-struct activate
-{
-    bool Value = true;
 };
 
 // pending_link is an edge whose source is known and whose target is still missing.
@@ -119,7 +114,7 @@ concept link_applicable_property = requires { typename prop::owner_type; } &&
                                     std::is_same_v<base_object, typename prop::owner_type>);
 } // namespace detail
 
-// Nested property enums whose owning property applies to link (e.g. LP_style::style)
+// Nested property enums whose owning property applies to link (e.g. LP_style::style, LP_activate::activation)
 template<typename e>
 concept link_property_enum = property_enum<e> && detail::link_applicable_property<property_of_t<e>>;
 
@@ -132,9 +127,9 @@ concept link_property_literal =
 template<typename t>
 concept link_decoration =
   link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label> ||
-  std::is_same_v<std::remove_cvref_t<t>, activate> || std::is_convertible_v<t, const char*>;
+  std::is_convertible_v<t, const char*>;
 
-// ---- pending edge decorations (any deduced link property / UDL / activate) ----
+// ---- pending edge decorations (any deduced link property / UDL) ----
 
 template<typename e>
     requires link_property_enum<e>
@@ -165,13 +160,6 @@ operator>>(pending_link _pending, const char* _label)
 {
     // Raw C-string sugar for OP_name; preferred form is "Yes"_op_name
     return std::move(_pending) >> property_literal<OP_name>{ _label };
-}
-
-inline pending_link
-operator>>(pending_link _pending, activate _activate)
-{
-    _pending.Decorations.push_back([_activate](link& _link) { _link.template set<LP_activate>(_activate.Value); });
-    return _pending;
 }
 
 // ---- starting a pending edge from a node or from the end of a chain ----
