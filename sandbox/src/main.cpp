@@ -17,7 +17,10 @@ example1_flowchart()
     _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    // Create nodes: one call packs name / shape / class (UDLs + nested enums from #5)
+    // Create nodes: one call packs name / shape / class (UDLs + nested enums from #5).
+    // Duplicate owning properties in one pack are a compile error (same uniqueness as >>), e.g.:
+    //   _graph.new_object<node>("A"_op_name, "B"_op_name);           // two OP_name
+    //   _graph.new_object<node>(NP_shape::k_rect, NP_shape::k_diamond); // two NP_shape
     node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
     node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);

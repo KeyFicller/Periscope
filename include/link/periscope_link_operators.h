@@ -243,10 +243,13 @@ template<typename... decorations, typename deco>
 auto
 operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
-    // Reject duplicate owning properties at the append site (clear message vs. silent overwrite
-    // at connect/set). Keys by property type: OP_name / LP_style / LP_activate — so
-    // "Yes"_op_name + label{}, or two LP_style::*, fail here.
-    static_assert(detail::link_decoration_property_unique_v<deco, decorations...>,
+    // Reject duplicate owning properties at the append site (vs. silent overwrite at
+    // connect/set). Keys by property type: OP_name / LP_style / LP_activate — so
+    // "Yes"_op_name + label{}, or two LP_style::*, fail here. The colliding Prop is
+    // named in the instantiation (require_unique_owning_property<Prop, false>).
+    static_assert(detail::require_unique_owning_property<
+                    detail::link_decoration_property_t<deco>,
+                    detail::link_decoration_property_unique_v<deco, decorations...>>::value,
                   "periscope: duplicate property in >> chain — each of OP_name / LP_style / "
                   "LP_activate may appear at most once (e.g. not two styles, not "
                   "\"Yes\"_op_name together with label{})");

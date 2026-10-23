@@ -35,7 +35,9 @@ int main() {
 
     graph _graph;
 
-    // Variadic new_object applies deduced properties (UDLs / nested enums) in one call
+    // Variadic new_object applies deduced properties (UDLs / nested enums) in one call.
+    // Each owning property appears at most once in the pack (duplicate OP_name / NP_shape
+    // is a compile error — no silent overwrite via set()).
     node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
     node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);

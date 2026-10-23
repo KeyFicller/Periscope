@@ -204,11 +204,15 @@ class graph
 
   public:
     // new_object creates an object and optionally applies deduced properties in one call,
-    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def)
+    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
+    // Each owning property may appear at most once in the pack (same uniqueness as >>):
+    // duplicate OP_name / NP_shape / … is a compile error — no silent overwrite via set().
     template<typename t, typename... args>
     t& new_object(args&&... _args)
     {
         static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
+        static_assert(detail::deduced_args_unique_v<args...>,
+                      "periscope: duplicate owning property in new_object pack");
         auto _handle = m_handle_manager.allocate();
         auto ptr = std::make_unique<t>();
         t& ref = *ptr;
@@ -242,11 +246,14 @@ class graph
     }
 
     // new_object_at: same deduced property pack as new_object, pinned to a handle
-    // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle)
+    // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle).
+    // Pack uniqueness matches new_object (duplicate owning property is a compile error).
     template<typename t, typename... args>
     t& new_object_at(const handle<underlying_type>& _handle, args&&... _args)
     {
         static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
+        static_assert(detail::deduced_args_unique_v<args...>,
+                      "periscope: duplicate owning property in new_object_at pack");
         if (m_handle_manager.is_allocated(_handle))
             throw std::runtime_error("Handle already allocated");
         auto ptr = std::make_unique<t>();
