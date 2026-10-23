@@ -177,32 +177,32 @@ class object : public base_object
   public:
     object() = default;
 
-    // set is to set property value with type checking
+    // set is to set property value with type checking; returns derived& for chaining
     template<typename prop>
-    object& set(const typename prop::type& _value)
+    derived& set(const typename prop::type& _value)
     {
         static_assert(std::is_base_of_v<typename prop::owner_type, derived>,
                       "Owner must be a derived class of prop::owner_type");
         get_or_create<prop>().Value = _value;
-        return *this;
+        return static_cast<derived&>(*this);
     }
 
     // set overload: accept objects with get_handle() for handle properties
     template<typename prop, typename t>
         requires(std::is_same_v<typename prop::type, std::shared_ptr<base_handle>> && has_get_handle<t>::value &&
                  !std::is_same_v<t, typename prop::type>)
-    object& set(const t& _value)
+    derived& set(const t& _value)
     {
         static_assert(std::is_base_of_v<typename prop::owner_type, derived>,
                       "Owner must be a derived class of prop::owner_type");
         get_or_create<prop>().Value = _value.get_handle();
-        return *this;
+        return static_cast<derived&>(*this);
     }
 
     // set overload: deduce the property from a nested property enum, e.g. set(NP_shape::k_diamond)
     template<typename e>
         requires property_enum<e> && requires { typename property_of_t<e>::type; }
-    object& set(e _value)
+    derived& set(e _value)
     {
         return set<property_of_t<e>>(static_cast<typename property_of_t<e>::type>(_value));
     }
@@ -210,7 +210,7 @@ class object : public base_object
     // set overload: deduce the property from a string UDL, e.g. set("Start"_op_name)
     template<typename lit>
         requires property_literal_value<lit>
-    object& set(lit _literal)
+    derived& set(lit _literal)
     {
         return set<typename std::remove_cvref_t<lit>::property>(std::move(_literal.Value));
     }

@@ -203,9 +203,10 @@ class graph
     };
 
   public:
-    // new_object is to create a new object with auto-allocated handle
-    template<typename t>
-    t& new_object()
+    // new_object creates an object and optionally applies deduced properties in one call,
+    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def)
+    template<typename t, typename... args>
+    t& new_object(args&&... _args)
     {
         static_assert(std::is_base_of_v<base_object, t>, "T must be a derived class of base_object");
         auto _handle = m_handle_manager.allocate();
@@ -215,6 +216,7 @@ class graph
         ref.m_handle = std::make_shared<handle<underlying_type>>(_handle.id());
         ref.m_owner = this;
         ref.template set<OP_type>(static_hash<t>());
+        (ref.set(std::forward<args>(_args)), ...);
         return ref;
     }
 

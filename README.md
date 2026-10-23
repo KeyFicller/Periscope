@@ -32,43 +32,21 @@ Create a flowchart directly using the API with `int` as the handle type:
 
 int main() {
     using namespace periscope;
-    
-    graph<int> _graph;
-    
-    // Create nodes
-    node& start = _graph.new_object<node>();
-    start.set<OP_name>("Start").set<NP_shape>(NP_shape::k_rectangle);
-    
-    node& process = _graph.new_object<node>();
-    process.set<OP_name>("Process Data").set<NP_shape>(NP_shape::k_rectangle);
-    
-    node& decision = _graph.new_object<node>();
-    decision.set<OP_name>("Decision").set<NP_shape>(NP_shape::k_diamond);
-    
-    node& end = _graph.new_object<node>();
-    end.set<OP_name>("End").set<NP_shape>(NP_shape::k_rectangle);
-    
-    // Create links
-    link& link1 = _graph.new_object<link>();
-    link1.set<LP_source>(start)
-         .set<LP_target>(process)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-    
-    link& link2 = _graph.new_object<link>();
-    link2.set<LP_source>(process)
-         .set<LP_target>(decision)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask);
-    
-    link& link3 = _graph.new_object<link>();
-    link3.set<LP_source>(decision)
-         .set<LP_target>(end)
-         .set<LP_style>(LP_style::k_solid | LP_style::k_arrow_mask)
-         .set<OP_name>("Yes");
-    
-    // Configure graph
-    _graph.template set<GP_type>(graph_type::k_flowchart)
-          .template set<GP_output_format>(graph_output_format::k_markdown)
-          .template set<GP_flowchart_direction>(GP_flowchart_direction<int>::k_top_to_down);
+
+    graph _graph;
+
+    // Variadic new_object applies deduced properties (UDLs / nested enums) in one call
+    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
+    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
+    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
+    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
+
+    // operator>> creates links; labels / styles can sit between nodes
+    start >> process >> decision >> "Yes"_op_name >> end;
+
+    _graph.set(GP_type<>::k_flowchart)
+          .set(GP_output_format<>::k_markdown)
+          .set(GP_flowchart_direction<>::k_top_to_down);
     std::cout << _graph.to_string() << std::endl;
     return 0;
 }

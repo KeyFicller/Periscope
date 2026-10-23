@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graph/periscope_graph_fwd.h"
+#include <cstdint>
 #include <set>
 #include <sstream>
 #include <string>
