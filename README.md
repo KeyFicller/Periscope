@@ -24,7 +24,13 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 ## Example 1: Flowchart (using int as handle)
 
-Create a flowchart directly using the API with `int` as the handle type:
+Create a flowchart with `int` handles. Properties are applied in one deduced pack
+(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`); each owning
+property may appear **at most once** in a `new_object` / `>>` pack (duplicate
+`OP_name` / `NP_shape` / `LP_style` / `LP_activate` is a compile error). Sequential
+`.set()` after create is still fine for later mutation. Edges are **one-shot**:
+write the full `a >> props >> b` expression (no bare `std::string` / `const char*`
+on `>>` — literals use `"..."_op_name`, runtime names use `label{}`).
 
 ```cpp
 #include "periscope.h"
@@ -35,22 +41,12 @@ int main() {
 
     graph _graph;
 
-    // Variadic new_object applies deduced properties (UDLs / nested enums) in one call.
-    // Each owning property appears at most once in the pack (duplicate OP_name / NP_shape
-    // is a compile error — no silent overwrite via set()).
     node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
     node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
 
-    // operator>> creates links; labels / composed styles sit between nodes.
-    // Each decoration grows a typed pending_link<...> pack (heterogeneous, no type erasure).
-    // Literals use "..."_op_name (not bare strings); runtime names use label{}.
-    // Edges are one-shot: write the full `a >> props >> b` expression (no named/deferred edge).
-    // Chains must end on a target node — `a >> props` (no destination) is incomplete
-    // (pending_link is [[nodiscard]]; discarding it aborts rather than silently no-op).
-    // Each owning property appears at most once per chain (duplicate OP_name / LP_style /
-    // LP_activate is a compile error — no silent overwrite at connect).
+    // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
     start >> process >> decision >> "Yes"_op_name >> end;
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
@@ -79,7 +75,10 @@ flowchart TD
 
 ## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)
 
-Hook object interactions during program execution, using object pointers as handles:
+Hook object interactions during program execution, using object pointers as handles.
+Runtime strings use `.set<OP_name>(...)` after `new_object_at` (or `label{ msg }` on
+`>>`); compile-time literals prefer `"..."_op_name`. `LP_activate::*` is a nested
+enum decoration in the same one-shot chain.
 
 ```cpp
 #include "periscope.h"
@@ -90,21 +89,20 @@ class Service {
 public:
     std::string name;
     Service(const std::string& n) : name(n) {}
-    
+
     static graph<const void*>& get_hook_graph() {
         static graph<const void*> hook_graph;
         return hook_graph;
     }
-    
-    void send_request(Service* target, const std::string& msg) {
+
+    void send_request(Service* target, const std::string& msg, bool activate_target = false) {
         auto& hook_graph = get_hook_graph();
         static std::map<const void*, bool> registered;
-        
+
         handle<const void*> this_handle(reinterpret_cast<const void*>(this));
         handle<const void*> target_handle(reinterpret_cast<const void*>(target));
-        
-        // new_object_at takes the same deduced property pack as new_object;
-        // runtime strings keep explicit set<OP_name> (no property_literal factory).
+
+        // Same deduced pack as new_object; runtime name via sequential .set after create.
         if (!registered[this]) {
             hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
             registered[this] = true;
@@ -114,10 +112,14 @@ public:
             registered[target] = true;
         }
 
-        // Runtime message via explicit label{}; literals prefer "..."_op_name
-        hook_graph.access<node>(this_handle) >> label{ msg } >> hook_graph.access<node>(target_handle);
+        auto& src = hook_graph.access<node>(this_handle);
+        auto& dst = hook_graph.access<node>(target_handle);
+        if (activate_target)
+            src >> LP_activate::k_activate >> label{ msg } >> dst;
+        else
+            src >> label{ msg } >> dst;
     }
-    
+
     static void print_graph() {
         auto& hook_graph = get_hook_graph();
         hook_graph.set(GP_type<>::k_sequence)
@@ -131,14 +133,12 @@ int main() {
     Service client("Client");
     Service server("Server");
     Service database("Database");
-    
-    // Business logic triggers hooks
-    client.send_request(&server, "Request Data");
-    server.send_request(&database, "Query");
+
+    client.send_request(&server, "Request Data", true);
+    server.send_request(&database, "Query", true);
     database.send_request(&server, "Result");
     server.send_request(&client, "Response");
-    
-    // Output sequence diagram
+
     Service::print_graph();
     return 0;
 }
@@ -152,8 +152,8 @@ autonumber
 participant 0x16fb52dc8 as Client
 participant 0x16fb52d88 as Server
 participant 0x16fb52d58 as Database
-0x16fb52dc8 ->> 0x16fb52d88 : Request Data
-0x16fb52d88 ->> 0x16fb52d58 : Query
+0x16fb52dc8 ->>+ 0x16fb52d88 : Request Data
+0x16fb52d88 ->>+ 0x16fb52d58 : Query
 0x16fb52d58 ->> 0x16fb52d88 : Result
 0x16fb52d88 ->> 0x16fb52dc8 : Response
 ```
