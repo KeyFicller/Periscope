@@ -42,6 +42,9 @@ int main() {
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
 
     // operator>> creates links; labels / composed styles sit between nodes.
+    // Each decoration grows a typed pending_link<...> pack (heterogeneous, no type erasure).
+    // Literals use "..."_op_name (not bare strings); runtime names use label{}.
+    // Edges are one-shot: write the full `a >> props >> b` expression (no named/deferred edge).
     // Chains must end on a target node — `a >> props` (no destination) is incomplete
     // (pending_link is [[nodiscard]]; discarding it aborts rather than silently no-op).
     start >> process >> decision >> "Yes"_op_name >> end;

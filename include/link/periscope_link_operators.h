@@ -6,12 +6,11 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
@@ -27,21 +26,53 @@ class link_owner
 };
 
 // label is a tag carrying a runtime link label, e.g. `a >> label{msg} >> b`
-// (literals prefer "Yes"_op_name; no parallel property_literal factory)
+// (literals prefer "Yes"_op_name; no parallel property_literal factory; no bare string / const char*)
 struct label
 {
     std::string Value;
 };
 
-// pending_link is an edge whose source is known and whose target is still missing.
-// Decorations are type-erased setters applied to the created link (any deduced link property).
-// Incomplete chains (no destination node) must not be discarded: [[nodiscard]] + consume-on-connect.
+namespace detail {
+// Normalize >> decorations into values link::set can deduce (enums / property_literal).
+// label{} becomes property_literal<OP_name>; other link decorations pass through.
+template<typename t>
+struct normalize_link_decoration
+{
+    using type = std::remove_cvref_t<t>;
+    static type apply(t&& _value) { return std::forward<t>(_value); }
+};
+
+template<>
+struct normalize_link_decoration<label>
+{
+    using type = property_literal<OP_name>;
+    static type apply(label&& _label) { return property_literal<OP_name>{ std::move(_label.Value) }; }
+    static type apply(const label& _label) { return property_literal<OP_name>{ _label.Value }; }
+};
+} // namespace detail
+
+// pending_link is a typed incomplete edge used only as a temporary in a one-shot `>>` chain
+// (`a >> deco >> … >> b`). Decorations are a heterogeneous pack (no std::function erasure);
+// each `>> deco` appends and changes the instantiation. Not a supported DX path to name and
+// complete later — only rvalue overloads exist. Incomplete chains must not be discarded:
+// [[nodiscard]] + consume-on-connect + destructor abort if still live.
+template<typename... decorations>
 struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b)")]] pending_link
 {
     node* Source = nullptr;
-    std::vector<std::function<void(link&)>> Decorations;
+    std::tuple<decorations...> Decorations{};
 
     pending_link() = default;
+    explicit pending_link(node* _source)
+      : Source(_source)
+    {
+    }
+    pending_link(node* _source, std::tuple<decorations...> _decorations)
+      : Source(_source)
+      , Decorations(std::move(_decorations))
+    {
+    }
+
     pending_link(pending_link&& other) noexcept
       : Source(std::exchange(other.Source, nullptr))
       , Decorations(std::move(other.Decorations))
@@ -122,29 +153,28 @@ class link_ref
 };
 
 namespace detail {
-// connect creates the link for a completed pending edge
-inline link_ref
-connect(pending_link _pending, node& _target)
+// connect creates the link for a completed pending edge (typed decoration pack)
+template<typename... decorations>
+link_ref
+connect(pending_link<decorations...> _pending, node& _target)
 {
     // Release first so ~pending_link is inert even if create_link / set throws.
     node& source = *_pending.Source;
-    auto decorations = std::move(_pending.Decorations);
+    auto decorations_pack = std::move(_pending.Decorations);
     _pending.release();
     if (source.owner() == nullptr || source.owner() != _target.owner())
         throw std::runtime_error("Cannot link nodes that do not belong to the same graph");
     link& created = source.owner()->create_link();
     created.set<LP_source>(source).set<LP_target>(_target);
-    for (const auto& apply : decorations)
-        apply(created);
+    std::apply([&created](auto&&... _deco) { (created.set(std::forward<decltype(_deco)>(_deco)), ...); },
+               std::move(decorations_pack));
     return link_ref(created, _target);
 }
 
-inline pending_link
+inline pending_link<>
 start(node& _source)
 {
-    pending_link pending;
-    pending.Source = &_source;
-    return pending;
+    return pending_link<>{ &_source };
 }
 
 // Properties applicable to a link: link-owned props, or base_object props shared by all objects (OP_name)
@@ -164,52 +194,37 @@ concept link_property_literal =
   property_literal_value<lit> && detail::link_applicable_property<typename std::remove_cvref_t<lit>::property>;
 
 // link_decoration lists what may sit between two nodes in a `>>` chain.
-// A chain that stops on a decoration (no target node) yields a discarded pending_link
-// and fails: [[nodiscard]] at compile time, logic_error if forced through (void).
+// Bare std::string / const char* are intentionally excluded (ambiguous with other string link
+// props): literals use "..."_op_name; runtime names use label{} or set<OP_name>.
+// Edges are one-shot rvalue chains; a chain that stops on a decoration (no target) yields a
+// discarded pending_link and fails: [[nodiscard]] at compile time, abort if forced through (void).
 template<typename t>
 concept link_decoration =
-  link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label> ||
-  std::is_convertible_v<t, const char*>;
+  link_property_enum<t> || link_property_literal<t> || std::is_same_v<std::remove_cvref_t<t>, label>;
 
-// ---- pending edge decorations (any deduced link property / UDL) ----
+// ---- pending edge decorations (typed pack growth; any deduced link property / UDL / label{}) ----
 
-template<typename e>
-    requires link_property_enum<e>
-pending_link
-operator>>(pending_link _pending, e _value)
+template<typename... decorations, typename deco>
+    requires link_decoration<deco>
+auto
+operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
-    _pending.Decorations.push_back([_value](link& _link) { _link.set(_value); });
-    return _pending;
-}
-
-template<typename lit>
-    requires link_property_literal<lit>
-pending_link
-operator>>(pending_link _pending, lit _literal)
-{
-    _pending.Decorations.push_back([_literal = std::move(_literal)](link& _link) mutable { _link.set(std::move(_literal)); });
-    return _pending;
-}
-
-inline pending_link
-operator>>(pending_link _pending, label _label)
-{
-    // Explicit runtime OP_name — bare std::string is not a decoration (ambiguous with other string props)
-    return std::move(_pending) >> property_literal<OP_name>{ std::move(_label.Value) };
-}
-
-inline pending_link
-operator>>(pending_link _pending, const char* _label)
-{
-    // Raw C-string sugar for OP_name; preferred form is "Yes"_op_name
-    return std::move(_pending) >> property_literal<OP_name>{ _label };
+    using normalized = typename detail::normalize_link_decoration<deco>::type;
+    node* source = _pending.Source;
+    auto pack = std::move(_pending.Decorations);
+    _pending.release();
+    return pending_link<decorations..., normalized>{
+        source,
+        std::tuple_cat(std::move(pack),
+                       std::make_tuple(detail::normalize_link_decoration<deco>::apply(std::move(_decoration))))
+    };
 }
 
 // ---- starting a pending edge from a node or from the end of a chain ----
 
 template<typename decoration>
     requires link_decoration<decoration>
-pending_link
+auto
 operator>>(node& _source, decoration _decoration)
 {
     return detail::start(_source) >> std::move(_decoration);
@@ -217,7 +232,7 @@ operator>>(node& _source, decoration _decoration)
 
 template<typename decoration>
     requires link_decoration<decoration>
-pending_link
+auto
 operator>>(const link_ref& _chain, decoration _decoration)
 {
     return detail::start(_chain.target()) >> std::move(_decoration);
@@ -225,8 +240,9 @@ operator>>(const link_ref& _chain, decoration _decoration)
 
 // ---- completing an edge ----
 
-inline link_ref
-operator>>(pending_link _pending, node& _target)
+template<typename... decorations>
+link_ref
+operator>>(pending_link<decorations...>&& _pending, node& _target)
 {
     return detail::connect(std::move(_pending), _target); // releases before destroy
 }

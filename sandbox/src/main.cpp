@@ -26,8 +26,8 @@ example1_flowchart()
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)):
     // composed LP_style::*_*_arrow avoids `k_dashed | k_arrow_mask` and trailing .set()
     start >> process >> decision >> "Yes"_op_name >> end;
-    // Incomplete chain (no destination) is rejected: pending_link is [[nodiscard]] and its
-    // destructor aborts if never connected — e.g. the following would fail, not silently drop:
+    // Incomplete chain (no destination) is rejected: typed pending_link<...> is [[nodiscard]]
+    // and its destructor aborts if never connected — e.g. the following would fail, not silently drop:
     //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
     decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
 
@@ -75,7 +75,9 @@ class Service
             registered[target] = true;
         }
 
-        // Runtime message via explicit label{}; literals prefer "..."_op_name
+        // Runtime message via explicit label{}; literals prefer "..."_op_name.
+        // Decorations grow a typed pending_link<...> pack (no std::function erasure).
+        // Edges are one-shot: `src >> props >> dst` in a single expression (no named/deferred edge).
         auto& src = hook_graph.access<node>(this_handle);
         auto& dst = hook_graph.access<node>(target_handle);
         if (activate_target)
