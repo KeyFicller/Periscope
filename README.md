@@ -30,7 +30,7 @@ target_link_libraries(your_target PRIVATE Periscope::periscope)
 | `label{ runtime_string }` | runtime edge/node name (no bare `std::string` on `>>`) |
 | `property_literal<NP_subgraph_node>{ a, b }` | vector-of-handle props |
 
-Mermaid under each example is the verbatim `to_string()` body from running that snippet (same shapes as `sandbox/src/main.cpp`).
+Mermaid under each example is the verbatim `to_string()` body from running that snippet alone.
 
 ## Example 1 — Flowchart
 
@@ -87,86 +87,43 @@ class 6 DecisionClass
 class 7 EndClass
 ```
 
-## Example 2 — Sequence (pointer handles)
-
-Runtime names use `.set<OP_name>(…)` after `new_object_at`, or `label{ msg }` on `>>`.
+## Example 2 — Sequence
 
 ```cpp
 #include "periscope.h"
 #include <iostream>
-#include <map>
 
 using namespace periscope;
 
-class Service {
-public:
-    std::string name;
-    Service(const std::string& n) : name(n) {}
-
-    static graph<const void*>& get_hook_graph() {
-        static graph<const void*> hook_graph;
-        return hook_graph;
-    }
-
-    void send_request(Service* target, const std::string& msg, bool activate_target = false) {
-        auto& hook_graph = get_hook_graph();
-        static std::map<const void*, bool> registered;
-
-        handle<const void*> this_handle(reinterpret_cast<const void*>(this));
-        handle<const void*> target_handle(reinterpret_cast<const void*>(target));
-
-        if (!registered[this]) {
-            hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
-            registered[this] = true;
-        }
-        if (!registered[target]) {
-            hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
-            registered[target] = true;
-        }
-
-        auto& src = hook_graph.access<node>(this_handle);
-        auto& dst = hook_graph.access<node>(target_handle);
-        if (activate_target)
-            src >> LP_activate::k_activate >> label{ msg } >> dst;
-        else
-            src >> label{ msg } >> dst;
-    }
-
-    static void print_graph() {
-        auto& hook_graph = get_hook_graph();
-        hook_graph >> GP_type<>::k_sequence
-                   >> GP_output_format<>::k_markdown
-                   >> GP_sequence_show_number<>::k_on;
-        std::cout << hook_graph.to_string() << std::endl;
-    }
-};
-
 int main() {
-    Service client("Client");
-    Service server("Server");
-    Service database("Database");
+    graph seq;
+    seq >> GP_type<>::k_sequence
+        >> GP_output_format<>::k_markdown
+        >> GP_sequence_show_number<>::k_on;
 
-    client.send_request(&server, "Request Data", true);
-    server.send_request(&database, "Query", true);
-    database.send_request(&server, "Result");
-    server.send_request(&client, "Response");
+    node& client = node(seq) >> "Client"_name;
+    node& server = node(seq) >> "Server"_name;
+    node& database = node(seq) >> "Database"_name;
 
-    Service::print_graph();
+    client >> LP_activate::k_activate >> "Request Data"_name >> server;
+    server >> LP_activate::k_activate >> "Query"_name >> database;
+    database >> "Result"_name >> server;
+    server >> "Response"_name >> client;
+
+    std::cout << seq.to_string() << std::endl;
 }
 ```
-
-Participant ids are the live pointer handles from the run:
 
 ```mermaid
 sequenceDiagram
 autonumber
-participant 0x7fff28976630 as Client
-participant 0x7fff28976610 as Server
-participant 0x7fff289765f0 as Database
-0x7fff28976630 ->>+ 0x7fff28976610 : Request Data
-0x7fff28976610 ->>+ 0x7fff289765f0 : Query
-0x7fff289765f0 ->> 0x7fff28976610 : Result
-0x7fff28976610 ->> 0x7fff28976630 : Response
+participant OBJ0 as Client
+participant OBJ1 as Server
+participant OBJ2 as Database
+OBJ0 ->>+ OBJ1 : Request Data
+OBJ1 ->>+ OBJ2 : Query
+OBJ2 ->> OBJ1 : Result
+OBJ1 ->> OBJ0 : Response
 ```
 
 ## Example 3 — Gantt
