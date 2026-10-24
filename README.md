@@ -46,7 +46,10 @@ does not steal one-shot edge `>>`. Properties are the same deduced pack as `new_
 Replace-strategy owning props (`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most
 once** in a `new_object` / `Object(graph) >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so
 style pieces may repeat and OR into one slot. Sequential `.set()` after create is still fine
-for later mutation.
+for later mutation. **Graph config** uses the same `>>` spelling: `graph >> prop…` means
+`set` (`>>` ≡ `set` on `graph&`). Left operand is `graph&`, so it does not collide with edge
+`>>` (`node&`) or `Object(graph) >>` create. `.set(...)` remains for explicit template forms
+(e.g. `set<OP_name>(runtime_string)`).
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
 `std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
 `label{}`).
@@ -70,9 +73,9 @@ int main() {
     // LP_style pieces OR (same as k_dashed_arrow):
     decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
-    _graph.set(GP_type<>::k_flowchart)
-          .set(GP_output_format<>::k_markdown)
-          .set(GP_flowchart_direction<>::k_top_to_down);
+    _graph >> GP_type<>::k_flowchart
+           >> GP_output_format<>::k_markdown
+           >> GP_flowchart_direction<>::k_top_to_down;
     std::cout << _graph.to_string() << std::endl;
     return 0;
 }
@@ -142,9 +145,9 @@ public:
 
     static void print_graph() {
         auto& hook_graph = get_hook_graph();
-        hook_graph.set(GP_type<>::k_sequence)
-                  .set(GP_output_format<>::k_markdown)
-                  .set(GP_sequence_show_number<>::k_on);
+        hook_graph >> GP_type<>::k_sequence
+                   >> GP_output_format<>::k_markdown
+                   >> GP_sequence_show_number<>::k_on;
         std::cout << hook_graph.to_string() << std::endl;
     }
 };
@@ -191,9 +194,9 @@ int main() {
     using namespace periscope;
 
     graph _graph;
-    _graph.set(GP_type<>::k_gantt)
-          .set(GP_output_format<>::k_markdown)
-          .set(GP_date_format<>::k_hour_minute);
+    _graph >> GP_type<>::k_gantt
+           >> GP_output_format<>::k_markdown
+           >> GP_date_format<>::k_hour_minute;
 
     // Pack name + ticks via deduced UDLs (mirrors OP_/NP_ naming)
     _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
@@ -229,9 +232,9 @@ int main() {
     using namespace periscope;
 
     graph flow;
-    flow.set(GP_type<>::k_flowchart)
-        .set(GP_output_format<>::k_markdown)
-        .set(GP_flowchart_direction<>::k_top_to_down);
+    flow >> GP_type<>::k_flowchart
+         >> GP_output_format<>::k_markdown
+         >> GP_flowchart_direction<>::k_top_to_down;
 
     flow.new_object<class_def>(
         "GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
@@ -245,7 +248,7 @@ int main() {
     std::cout << flow.to_string() << std::endl;
 
     graph seq;
-    seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
+    seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
     node& client = seq.new_object<node>("Client"_op_name);
     node& server = seq.new_object<node>("Server"_op_name);
     seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });

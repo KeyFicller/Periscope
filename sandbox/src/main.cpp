@@ -9,7 +9,7 @@ void
 example1_flowchart()
 {
     graph _graph;
-    _graph.set("Hello"_op_name);
+    _graph >> "Hello"_op_name;
 
     // Class defs via fluent create: class_def(graph) >> props (same pack as new_object).
     // Statement form is fine when the handle is unused — builder dtor auto-materializes.
@@ -38,8 +38,8 @@ example1_flowchart()
     // Piece-wise LP_style folds via bitwise_or (equiv. k_dashed_arrow):
     decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
-    // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
-    _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
+    // Configure graph: >> ≡ set (nested enums / UDLs). .set() still works as escape hatch.
+    _graph >> GP_type<>::k_flowchart >> GP_output_format<>::k_markdown >> GP_flowchart_direction<>::k_top_to_down;
 
     std::cout << "=== Example 1: Flowchart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -94,7 +94,7 @@ class Service
     static void print_graph()
     {
         auto& hook_graph = get_hook_graph();
-        hook_graph.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown).set(GP_sequence_show_number<>::k_on);
+        hook_graph >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown >> GP_sequence_show_number<>::k_on;
         std::cout << "=== Example 2: Sequence Diagram ===\n";
         std::cout << hook_graph.to_string() << std::endl;
     }
@@ -121,7 +121,7 @@ void
 example3_gantt()
 {
     graph _graph;
-    _graph.set(GP_type<>::k_gantt).set(GP_output_format<>::k_markdown).set(GP_date_format<>::k_hour_minute);
+    _graph >> GP_type<>::k_gantt >> GP_output_format<>::k_markdown >> GP_date_format<>::k_hour_minute;
 
     // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
     _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
@@ -138,7 +138,7 @@ void
 example4_subgraph_and_notes()
 {
     graph _graph;
-    _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
+    _graph >> GP_type<>::k_flowchart >> GP_output_format<>::k_markdown >> GP_flowchart_direction<>::k_top_to_down;
 
     class_def(_graph) >> "GroupStyle"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
 
@@ -156,7 +156,7 @@ example4_subgraph_and_notes()
 
     // Sequence note spanning participants via MNP_basis handle pack
     graph seq;
-    seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
+    seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
     node& client = seq.new_object<node>("Client"_op_name);
     node& server = seq.new_object<node>("Server"_op_name);
     // Statement form: unused note handles — builder dtor auto-materializes into the graph.

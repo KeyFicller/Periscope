@@ -6,7 +6,7 @@ namespace periscope {
 // Non-template bases hold the single enum definitions (source of truth).
 // GP_type / GP_output_format templates re-export these via inheritance;
 // graph_type / graph_output_format are aliases — not second enumerator lists.
-// io() and internal switches use the aliases; call sites prefer set(GP_type<>::k_*).
+// io() and internal switches use the aliases; call sites prefer graph >> GP_type<>::k_* (>> ≡ set).
 
 struct GP_type_base
 {

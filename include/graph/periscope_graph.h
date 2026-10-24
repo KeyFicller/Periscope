@@ -286,6 +286,18 @@ class graph
     handle_manager<underlying_type> m_handle_manager;
     std::vector<std::unique_ptr<base_object>> m_elements;
 };
+
+// Convention: >> on graph means set (same deduced overloads as .set(...)).
+// Left operand is graph& — does not collide with edge >> (node& / pending_link / link_ref)
+// or Object(graph) >> create (object_builder / create_seed rvalue). .set() remains for
+// explicit template forms (e.g. set<OP_name>(runtime_string)).
+template<typename underlying_type, typename arg>
+    requires requires(graph<underlying_type>& g, arg&& a) { g.set(std::forward<arg>(a)); }
+graph<underlying_type>&
+operator>>(graph<underlying_type>& _graph, arg&& _value)
+{
+    return _graph.set(std::forward<arg>(_value));
+}
 } // namespace periscope
 
 // object_builder + Object(graph&) create-intermediary for node/note/class_def (needs complete graph<>)
