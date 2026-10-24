@@ -26,12 +26,12 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 Create a flowchart with `int` handles. Prefer the fluent node builder:
 
-`Node& n = node(_graph) >> "Name"_op_name >> NP_shape::k_rectangle;`
+`node& n = node(_graph) >> "Name"_op_name >> NP_shape::k_rectangle;`
 
-The graph-node **type** is `Node` (capital N); `node` is a constexpr function object so
-`node(graph)` works in `namespace periscope` (a free `node(graph&)` cannot sit next to a
-`class node`). `new_object<Node>(...)` still works — the builder calls it under the hood.
-The builder is a **distinct type** until it materializes to `Node&`, so Node-prop `>>` does
+The graph-node **type** is `node`. `node(graph)` is the create-intermediary constructor
+(not a separate factory symbol); `>>` grows a typed `node_builder` pack that materializes
+to `node&` via `new_object<node>`. `new_object<node>(...)` still works directly.
+The builder is a **distinct type** until it materializes to `node&`, so node-prop `>>` does
 not steal one-shot edge `>>`. Properties are the same deduced pack as `new_object`
 (`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or `"Name"_np_class_def`).
 Replace-strategy owning props (`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most
@@ -51,10 +51,10 @@ int main() {
 
     graph _graph;
 
-    Node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle;
-    Node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle;
-    Node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond;
-    Node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle;
+    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle;
+    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle;
+    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond;
+    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle;
 
     // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
     start >> process >> decision >> "Yes"_op_name >> end;
@@ -115,16 +115,16 @@ public:
 
         // Same deduced pack as new_object; runtime name via sequential .set after create.
         if (!registered[this]) {
-            hook_graph.new_object_at<Node>(this_handle).set<OP_name>(name);
+            hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
             registered[this] = true;
         }
         if (!registered[target]) {
-            hook_graph.new_object_at<Node>(target_handle).set<OP_name>(target->name);
+            hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
             registered[target] = true;
         }
 
-        auto& src = hook_graph.access<Node>(this_handle);
-        auto& dst = hook_graph.access<Node>(target_handle);
+        auto& src = hook_graph.access<node>(this_handle);
+        auto& dst = hook_graph.access<node>(target_handle);
         if (activate_target)
             src >> LP_activate::k_activate >> label{ msg } >> dst;
         else
@@ -187,9 +187,9 @@ int main() {
           .set(GP_date_format<>::k_hour_minute);
 
     // Pack name + ticks via deduced UDLs (mirrors OP_/NP_ naming)
-    _graph.new_object<Node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
-    _graph.new_object<Node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
-    _graph.new_object<Node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
+    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
+    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
+    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
 
     std::cout << _graph.to_string() << std::endl;
     return 0;
@@ -227,18 +227,18 @@ int main() {
     flow.new_object<class_def>(
         "GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
 
-    Node& a = flow.new_object<Node>("A"_op_name, NP_shape::k_rectangle);
-    Node& b = flow.new_object<Node>("B"_op_name, NP_shape::k_rectangle);
-    Node& c = flow.new_object<Node>("C"_op_name, NP_shape::k_rectangle);
-    flow.new_object<Node>(
+    node& a = flow.new_object<node>("A"_op_name, NP_shape::k_rectangle);
+    node& b = flow.new_object<node>("B"_op_name, NP_shape::k_rectangle);
+    node& c = flow.new_object<node>("C"_op_name, NP_shape::k_rectangle);
+    flow.new_object<node>(
         "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
 
     std::cout << flow.to_string() << std::endl;
 
     graph seq;
     seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
-    Node& client = seq.new_object<Node>("Client"_op_name);
-    Node& server = seq.new_object<Node>("Server"_op_name);
+    node& client = seq.new_object<node>("Client"_op_name);
+    node& server = seq.new_object<node>("Server"_op_name);
     seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
     seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
 

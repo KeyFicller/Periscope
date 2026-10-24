@@ -12,10 +12,10 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
-class Node;
+class node;
 
 // NP_shape is property for node shape
-struct NP_shape : base_property<enum_type, Node>
+struct NP_shape : base_property<enum_type, node>
 {
     enum shape : enum_type
     {
@@ -51,14 +51,14 @@ struct NP_shape : base_property<enum_type, Node>
 };
 
 // NP_subgraph is property for node subgraph (vector → append reduce in deduced packs).
-// Pack members with property_literal<NP_subgraph_node>{ a, b } (Node& / handle owners).
-struct NP_subgraph_node : base_property<std::vector<std::shared_ptr<base_handle>>, Node>
+// Pack members with property_literal<NP_subgraph_node>{ a, b } (node& / handle owners).
+struct NP_subgraph_node : base_property<std::vector<std::shared_ptr<base_handle>>, node>
 {
     static constexpr property_reduce reduce = property_reduce::append;
 };
 
 // NP_class_def is property for node class definition
-struct NP_class_def : base_property<std::string, Node>
+struct NP_class_def : base_property<std::string, node>
 {
     // to_string is to convert property to string representation
     static std::string to_string(const NP_class_def& _property, graph_type _graph_type = io().GraphType)
@@ -96,7 +96,7 @@ operator""_tick(const char* _str, std::size_t _len)
     return data_tick{ std::stoi(std::string(_str, 0, pos)), std::stoi(std::string(_str, pos + 1, _len - pos - 1)) };
 }
 
-struct NP_time_tick : base_property<data_tick, Node>
+struct NP_time_tick : base_property<data_tick, node>
 {
     // to_string is a raw tick dump; gantt Mermaid padding is done in graph::to_string_impl
     // via GP_date_format::format_tick (io() only holds graph-universal state).

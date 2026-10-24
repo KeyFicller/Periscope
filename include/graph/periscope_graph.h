@@ -141,7 +141,7 @@ class graph
             enum_type date_fmt = GP_date_format<underlying_type>::date_format::k_hour_minute;
             if (this->template has<GP_date_format<underlying_type>>())
                 date_fmt = this->template get<GP_date_format<underlying_type>>().Value;
-            traverser<periscope::Node>::traverse(*this, [&str, date_fmt](periscope::Node& n) {
+            traverser<periscope::node>::traverse(*this, [&str, date_fmt](periscope::node& n) {
                 std::string label_str = n.template get<OP_name>().Value;
                 std::string start_tick_str;
                 std::string end_tick_str;
@@ -156,8 +156,8 @@ class graph
                 str += std::format("    {} : {}, {}\n", label_str, start_tick_str, end_tick_str);
             });
         } else {
-            traverser<periscope::Node>::traverse(
-              *this, [&str](periscope::Node& n) { str += std::format("{}\n", n.to_string()); });
+            traverser<periscope::node>::traverse(
+              *this, [&str](periscope::node& n) { str += std::format("{}\n", n.to_string()); });
         }
 
         // Draw links and notes
@@ -165,7 +165,7 @@ class graph
           *this, [&str](base_object& object) { str += std::format("{}\n", object.to_string()); });
 
         // Assign node names to class definitions
-        traverser<periscope::Node>::traverse(*this, [&str](periscope::Node& n) {
+        traverser<periscope::node>::traverse(*this, [&str](periscope::node& n) {
             if (n.has<NP_class_def>()) {
                 str += std::format("class {} {}Class\n", n.get_handle()->print(), n.template _V_str<NP_class_def>());
             }
@@ -201,7 +201,7 @@ class graph
 
   public:
     // new_object creates an object and optionally applies deduced properties in one call,
-    // e.g. new_object<Node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
+    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
     // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
     // NP_shape / … is a compile error. Append (vector) / bitwise_or (flag masks) may repeat;
     // fold via apply_pack_arg (sequential .set() still assigns / replaces).
@@ -245,7 +245,7 @@ class graph
     }
 
     // new_object_at: same deduced property pack as new_object, pinned to a handle
-    // e.g. new_object_at<Node>(h, "Client"_op_name, NP_shape::k_rectangle).
+    // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle).
     // Pack uniqueness / append fold match new_object.
     template<typename t, typename... args>
     t& new_object_at(const handle<underlying_type>& _handle, args&&... _args)
@@ -288,5 +288,5 @@ class graph
 };
 } // namespace periscope
 
-// node_builder + constexpr node(...) factory (needs complete graph<>)
+// node_builder + node(graph&) create-intermediary (needs complete graph<>)
 #include "node/periscope_node_builder.h"
