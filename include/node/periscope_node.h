@@ -1,12 +1,9 @@
 #pragma once
 
 #include "node/periscope_node_properties.h"
-#include "object/periscope_object.h"
+#include "object/periscope_create_seed.h"
 #include "object/periscope_object_properties.h"
-#include <cstdio>
-#include <cstdlib>
 #include <format>
-#include <utility>
 
 namespace periscope {
 // ------------------------ Main template -----------------------
@@ -20,7 +17,9 @@ class graph;
 // create-intermediary temporary (not yet in the graph); rvalue `>>` grows a typed
 // object_builder<node, …> pack; conversion to node& materializes via new_object<node>.
 // Lvalue `node&` keeps one-shot edge `>>` (see periscope_link_operators.h).
-class node : public object<node>
+// Create-seed state / move / incomplete abort live in create_seed<node> (shared with note /
+// class_def); link stays on plain object<link>.
+class node : public create_seed<node>
 {
   public:
     node() { set<OP_printable>(true); }
@@ -28,50 +27,6 @@ class node : public object<node>
     // Create-intermediary entry (defined after graph<> is complete in periscope_object_builder.h).
     template<typename underlying_type>
     explicit node(graph<underlying_type>& _graph) noexcept;
-
-    node(const node&) = delete;
-    node& operator=(const node&) = delete;
-
-    node(node&& other) noexcept
-      : object<node>(static_cast<object<node>&&>(other))
-      , m_create_graph(std::exchange(other.m_create_graph, nullptr))
-      , m_create_fn(std::exchange(other.m_create_fn, nullptr))
-    {
-    }
-
-    node& operator=(node&& other) noexcept
-    {
-        if (this != &other) {
-            static_cast<object<node>&>(*this) = static_cast<object<node>&&>(other);
-            m_create_graph = std::exchange(other.m_create_graph, nullptr);
-            m_create_fn = std::exchange(other.m_create_fn, nullptr);
-        }
-        return *this;
-    }
-
-    ~node()
-    {
-        if (m_create_fn == nullptr)
-            return;
-        std::fputs("periscope: incomplete node(graph) — discarded without materializing to node& "
-                   "(write `node& n = node(g) >> props`, not `node(g) >> props`)\n",
-                   stderr);
-        std::abort();
-    }
-
-    // Create-seed helpers for object_builder / operator>>(node&&, …).
-    bool is_create_seed() const noexcept { return m_create_fn != nullptr; }
-
-    struct create_seed_state
-    {
-        void* Graph = nullptr;
-        node& (*CreateFn)(void*) = nullptr;
-    };
-
-    create_seed_state extract_create() noexcept
-    {
-        return { std::exchange(m_create_graph, nullptr), std::exchange(m_create_fn, nullptr) };
-    }
 
   public:
     // to_string_impl is implementation of object::to_string_impl
@@ -112,10 +67,5 @@ class node : public object<node>
                 throw std::runtime_error("Unsupported graph type");
         }
     }
-
-  private:
-    // Create-intermediary only (null for graph-owned nodes): target graph + typed new_object trampoline.
-    void* m_create_graph = nullptr;
-    node& (*m_create_fn)(void*) = nullptr;
 };
 } // namespace periscope

@@ -149,31 +149,34 @@ concept has_create_seed = requires(Object& o) {
 };
 } // namespace detail
 
+// Thin typed trampolines — create-seed fields / move / dtor live in create_seed<Object>.
 template<typename underlying_type>
 node::node(graph<underlying_type>& _graph) noexcept
-  : m_create_graph(&_graph)
-  , m_create_fn(+[](void* p) -> node& { return static_cast<graph<underlying_type>*>(p)->template new_object<node>(); })
+  : create_seed<node>(
+      &_graph,
+      +[](void* p) -> node& { return static_cast<graph<underlying_type>*>(p)->template new_object<node>(); })
 {
     // Hollow temporary — not OP_printable, not inserted; first `>>` starts object_builder.
 }
 
 template<typename underlying_type>
 note::note(graph<underlying_type>& _graph) noexcept
-  : m_create_graph(&_graph)
-  , m_create_fn(+[](void* p) -> note& { return static_cast<graph<underlying_type>*>(p)->template new_object<note>(); })
+  : create_seed<note>(
+      &_graph,
+      +[](void* p) -> note& { return static_cast<graph<underlying_type>*>(p)->template new_object<note>(); })
 {
 }
 
 template<typename underlying_type>
 class_def::class_def(graph<underlying_type>& _graph) noexcept
-  : m_create_graph(&_graph)
-  , m_create_fn(
+  : create_seed<class_def>(
+      &_graph,
       +[](void* p) -> class_def& { return static_cast<graph<underlying_type>*>(p)->template new_object<class_def>(); })
 {
 }
 
 // Rvalue Object >> deco starts the typed builder (lvalue node& >> deco remains edge start).
-// Constrained to create-seed types (node / note / class_def). link has no create seed —
+// Constrained to create_seed<Object> types (node / note / class_def). link has no create seed —
 // edge `>>` stays the only link spelling; create links with new_object<link>.
 template<typename Object, typename deco>
     requires detail::has_create_seed<Object> && object_decoration<Object, deco>
