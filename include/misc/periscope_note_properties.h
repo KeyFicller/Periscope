@@ -37,7 +37,8 @@ struct MNP_orient : public base_property<enum_type, note>
 
 struct MNP_basis : public base_property<std::vector<std::shared_ptr<base_handle>>, note>
 {
-    // Vector of participants → append when the same key repeats in a deduced pack
+    // Vector of participants → append when the same key repeats in a deduced pack.
+    // Pack with property_literal<MNP_basis>{ client, server } (node& / handle owners).
     static constexpr property_reduce reduce = property_reduce::append;
 
     // to_string is to convert property to string representation

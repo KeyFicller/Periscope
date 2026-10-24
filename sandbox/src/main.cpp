@@ -11,17 +11,14 @@ example1_flowchart()
     graph _graph;
     _graph.set("Hello"_op_name);
 
-    // Class defs: discard return; pack name + MCD_* via deduced UDLs (no (void), no set<MCD_*>)
+    // Class defs + literal NP_class_def bind ("Name"_np_class_def).
     _graph.new_object<class_def>("Start"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("Process"_op_name, "#F5A623"_mcd_fill, "#C97E1C"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    // Create nodes: one call packs name / shape / class (UDLs + nested enums from #5).
-    // Duplicate *replace-strategy* (scalar) owning props in one pack are a compile error, e.g.:
-    //   _graph.new_object<node>("A"_op_name, "B"_op_name);           // two OP_name
-    //   _graph.new_object<node>(NP_shape::k_rect, NP_shape::k_diamond); // two NP_shape
-    // Vector props declare append reduce — duplicates fold (see example4_vector_reduce).
+    // Create nodes: pack name / shape / "Name"_np_class_def. Duplicate replace-strategy props
+    // are a compile error (two OP_name / two NP_shape). Vector-of-handle props: see example4.
     node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
     node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
@@ -132,46 +129,38 @@ example3_gantt()
     std::cout << _graph.to_string() << std::endl;
 }
 
-// Example 4: vector-valued props declare append reduce — duplicate keys in a deduced
-// pack concatenate; scalars stay unique; sequential .set() still replaces.
+// Example 4: subgraph + sequence notes — property_literal<Prop>{ node_a, node_b }
+// packs handles (no .get_handle()). NP_class_def via "Name"_np_class_def literal.
 void
-example4_vector_reduce()
+example4_subgraph_and_notes()
 {
     graph _graph;
     _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
+
+    _graph.new_object<class_def>("GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
 
     node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
     node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
     node& c = _graph.new_object<node>("C"_op_name, NP_shape::k_rectangle);
 
-    // Two NP_subgraph_node chunks in one pack → append fold (size 2).
-    // property_literal tags the vector chunk; no parallel factory.
-    node& group = _graph.new_object<node>("Group"_op_name,
-                                          property_literal<NP_subgraph_node>{ { a.get_handle() } },
-                                          property_literal<NP_subgraph_node>{ { b.get_handle(), c.get_handle() } });
+    // One NP_subgraph_node chunk from node refs; class style via "Name"_np_class_def.
+    node& group = _graph.new_object<node>(
+      "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
 
-    const auto& members = group.get<NP_subgraph_node>().Value;
-    std::cout << "=== Example 4: vector append reduce ===\n";
-    std::cout << "subgraph member count (expect 3): " << members.size() << "\n";
+    std::cout << "=== Example 4: subgraph + classDef literal ===\n";
+    std::cout << "subgraph member count (expect 3): " << group.get<NP_subgraph_node>().Value.size() << "\n";
+    std::cout << _graph.to_string() << "\n";
 
-    // Sequential .set() unchanged: assign/replace, does not append.
-    group.set<NP_subgraph_node>(std::vector<std::shared_ptr<base_handle>>{ a.get_handle() });
-    std::cout << "after set<> replace (expect 1): " << group.get<NP_subgraph_node>().Value.size() << "\n";
-
-    // Restore folded members for Mermaid output
-    group.set<NP_subgraph_node>(
-      std::vector<std::shared_ptr<base_handle>>{ a.get_handle(), b.get_handle(), c.get_handle() });
-
-    // Sequence note: two MNP_basis chunks append across participants
+    // Sequence note spanning participants via MNP_basis handle pack
     graph seq;
     seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
     node& client = seq.new_object<node>("Client"_op_name);
     node& server = seq.new_object<node>("Server"_op_name);
-    note& n = seq.new_object<note>("shared context"_op_name,
-                                   property_literal<MNP_basis>{ { client.get_handle() } },
-                                   property_literal<MNP_basis>{ { server.get_handle() } });
-    std::cout << "note basis count (expect 2): " << n.get<MNP_basis>().Value.size() << "\n";
-    std::cout << _graph.to_string() << "\n";
+    seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
+    // Single-participant note with orient
+    seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
+
+    std::cout << "=== Example 4b: sequence notes ===\n";
     std::cout << seq.to_string() << std::endl;
 }
 
@@ -184,6 +173,6 @@ main()
     std::cout << "\n";
     example3_gantt();
     std::cout << "\n";
-    example4_vector_reduce();
+    example4_subgraph_and_notes();
     return 0;
 }

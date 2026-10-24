@@ -205,6 +205,7 @@ class graph
     // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
     // NP_shape / … is a compile error. Append-strategy (vector) props may repeat; chunks
     // concatenate via apply_pack_arg (sequential .set() still assigns / replaces).
+    // Vector-of-handle props accept property_literal<Prop>{ node_a, node_b } (no .get_handle()).
     template<typename t, typename... args>
     t& new_object(args&&... _args)
     {

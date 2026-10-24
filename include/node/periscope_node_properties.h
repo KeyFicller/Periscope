@@ -50,7 +50,8 @@ struct NP_shape : base_property<enum_type, node>
     }
 };
 
-// NP_subgraph is property for node subgraph (vector → append reduce in deduced packs)
+// NP_subgraph is property for node subgraph (vector → append reduce in deduced packs).
+// Pack members with property_literal<NP_subgraph_node>{ a, b } (node& / handle owners).
 struct NP_subgraph_node : base_property<std::vector<std::shared_ptr<base_handle>>, node>
 {
     static constexpr property_reduce reduce = property_reduce::append;
