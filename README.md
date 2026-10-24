@@ -24,18 +24,20 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 ## Example 1: Flowchart (using int as handle)
 
-Create a flowchart with `int` handles. Prefer the fluent node builder:
+Create a flowchart with `int` handles. Prefer fluent create for graph objects:
 
 `node& n = node(_graph) >> "Name"_op_name >> NP_shape::k_rectangle;`
 
-The graph-node **type** is `node`. `node(graph)` is the create-intermediary constructor
-(not a separate factory symbol); `>>` grows a typed `node_builder` pack that materializes
-to `node&` via `new_object<node>`. `new_object<node>(...)` still works directly.
-The builder is a **distinct type** until it materializes to `node&`, so node-prop `>>` does
-not steal one-shot edge `>>`. Properties are the same deduced pack as `new_object`
+The same create-intermediary shape works for **`node`**, **`note`**, and **`class_def`**:
+`Object(graph) >> props…` — the type name *is* the factory (graph& constructor), `>>` grows a
+typed `object_builder<Object, …>` pack that materializes via `new_object<Object>`.
+`new_object<Object>(...)` still works directly. **`link` stays `new_object<link>`** — edge
+`>>` already owns that spelling, so there is no `link(graph) >> …` create.
+The builder is a **distinct type** until it materializes to `Object&`, so object-prop `>>`
+does not steal one-shot edge `>>`. Properties are the same deduced pack as `new_object`
 (`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or `"Name"_np_class_def`).
 Replace-strategy owning props (`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most
-once** in a `new_object` / `node(graph) >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so
+once** in a `new_object` / `Object(graph) >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so
 style pieces may repeat and OR into one slot. Sequential `.set()` after create is still fine
 for later mutation.
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare

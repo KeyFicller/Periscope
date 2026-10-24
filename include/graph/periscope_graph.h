@@ -141,7 +141,7 @@ class graph
             enum_type date_fmt = GP_date_format<underlying_type>::date_format::k_hour_minute;
             if (this->template has<GP_date_format<underlying_type>>())
                 date_fmt = this->template get<GP_date_format<underlying_type>>().Value;
-            traverser<periscope::node>::traverse(*this, [&str, date_fmt](periscope::node& n) {
+            traverser<node>::traverse(*this, [&str, date_fmt](node& n) {
                 std::string label_str = n.template get<OP_name>().Value;
                 std::string start_tick_str;
                 std::string end_tick_str;
@@ -156,8 +156,7 @@ class graph
                 str += std::format("    {} : {}, {}\n", label_str, start_tick_str, end_tick_str);
             });
         } else {
-            traverser<periscope::node>::traverse(
-              *this, [&str](periscope::node& n) { str += std::format("{}\n", n.to_string()); });
+            traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
         }
 
         // Draw links and notes
@@ -165,9 +164,10 @@ class graph
           *this, [&str](base_object& object) { str += std::format("{}\n", object.to_string()); });
 
         // Assign node names to class definitions
-        traverser<periscope::node>::traverse(*this, [&str](periscope::node& n) {
-            if (n.has<NP_class_def>()) {
-                str += std::format("class {} {}Class\n", n.get_handle()->print(), n.template _V_str<NP_class_def>());
+        traverser<node>::traverse(*this, [&str](node& node) {
+            if (node.has<NP_class_def>()) {
+                str +=
+                  std::format("class {} {}Class\n", node.get_handle()->print(), node.template _V_str<NP_class_def>());
             }
         });
         return str;
@@ -288,5 +288,5 @@ class graph
 };
 } // namespace periscope
 
-// node_builder + node(graph&) create-intermediary (needs complete graph<>)
-#include "node/periscope_node_builder.h"
+// object_builder + Object(graph&) create-intermediary for node/note/class_def (needs complete graph<>)
+#include "object/periscope_object_builder.h"

@@ -18,14 +18,14 @@ class graph;
 // node is the graph-node object type.
 // Create spelling: `node& n = node(graph) >> props…` — the graph& constructor makes a
 // create-intermediary temporary (not yet in the graph); rvalue `>>` grows a typed
-// node_builder pack; conversion to node& materializes via new_object<node>.
+// object_builder<node, …> pack; conversion to node& materializes via new_object<node>.
 // Lvalue `node&` keeps one-shot edge `>>` (see periscope_link_operators.h).
 class node : public object<node>
 {
   public:
     node() { set<OP_printable>(true); }
 
-    // Create-intermediary entry (defined after graph<> is complete in periscope_node_builder.h).
+    // Create-intermediary entry (defined after graph<> is complete in periscope_object_builder.h).
     template<typename underlying_type>
     explicit node(graph<underlying_type>& _graph) noexcept;
 
@@ -59,7 +59,7 @@ class node : public object<node>
         std::abort();
     }
 
-    // Create-seed helpers for node_builder / operator>>(node&&, …).
+    // Create-seed helpers for object_builder / operator>>(node&&, …).
     bool is_create_seed() const noexcept { return m_create_fn != nullptr; }
 
     struct create_seed_state
