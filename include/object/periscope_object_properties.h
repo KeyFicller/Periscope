@@ -54,8 +54,8 @@ concept property_enum = std::is_enum_v<e> && requires(e _value) { periscope_prop
 template<typename e>
 using property_of_t = decltype(periscope_property_of(std::declval<e>()));
 
-// property_literal tags a value with its owning property so set("..."_op_name) /
-// set("9:0"_np_time_tick_start) deduce the property without an explicit template arg.
+// property_literal tags a value with its owning property so set("..."_name) /
+// set("9:0"_tick_start) deduce the property without an explicit template arg.
 // For vector-of-handle props (NP_subgraph_node / MNP_basis), a pack of get_handle()
 // owners (node&, note&, …) builds the vector — no .get_handle() at the call site.
 template<typename prop>
@@ -193,9 +193,9 @@ struct OP_name : base_property<std::string, base_object>
     }
 };
 
-// "Start"_op_name -> property_literal<OP_name> (OP_ = object_property)
+// "Start"_name -> property_literal<OP_name>
 inline property_literal<OP_name>
-operator""_op_name(const char* _str, std::size_t _len)
+operator""_name(const char* _str, std::size_t _len)
 {
     return property_literal<OP_name>{ std::string(_str, _len) };
 }

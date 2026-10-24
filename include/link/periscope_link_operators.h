@@ -27,7 +27,7 @@ class link_owner
 };
 
 // label is a tag carrying a runtime link label, e.g. `a >> label{msg} >> b`
-// (literals prefer "Yes"_op_name; no parallel property_literal factory; no bare string / const char*)
+// (literals prefer "Yes"_name; no parallel property_literal factory; no bare string / const char*)
 struct label
 {
     std::string Value;
@@ -52,7 +52,7 @@ struct normalize_link_decoration<label>
 };
 // Owning property key for a >> decoration (after or before normalize).
 // Uniqueness is by replace-strategy property (OP_name / LP_activate), not by value type:
-// "Yes"_op_name and label{} both key as OP_name. LP_style is bitwise_or — pieces may repeat.
+// "Yes"_name and label{} both key as OP_name. LP_style is bitwise_or — pieces may repeat.
 template<typename deco>
 struct link_decoration_property;
 
@@ -216,14 +216,14 @@ concept link_applicable_property = requires {
 template<typename e>
 concept link_property_enum = property_enum<e> && detail::link_applicable_property<property_of_t<e>>;
 
-// String UDLs whose owning property applies to link (e.g. "Yes"_op_name -> OP_name)
+// String UDLs whose owning property applies to link (e.g. "Yes"_name -> OP_name)
 template<typename lit>
 concept link_property_literal =
   property_literal_value<lit> && detail::link_applicable_property<typename std::remove_cvref_t<lit>::property>;
 
 // link_decoration lists what may sit between two nodes in a `>>` chain.
 // Bare std::string / const char* are intentionally excluded (ambiguous with other string link
-// props): literals use "..."_op_name; runtime names use label{} or set<OP_name>.
+// props): literals use "..."_name; runtime names use label{} or set<OP_name>.
 // Edges are one-shot rvalue chains; a chain that stops on a decoration (no target) yields a
 // discarded pending_link and fails: [[nodiscard]] at compile time, abort if forced through (void).
 // Replace-strategy owning props appear at most once (see operator>> static_assert);
@@ -241,13 +241,13 @@ operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 {
     // Reject duplicate *replace-strategy* owning properties at the append site (vs. silent
     // overwrite at connect/set). Pack-level among replace keys only (same helper as
-    // new_object). OP_name / LP_activate stay unique — so "Yes"_op_name + label{} fails.
+    // new_object). OP_name / LP_activate stay unique — so "Yes"_name + label{} fails.
     // LP_style is bitwise_or and may repeat (pieces OR at connect).
     static_assert(detail::owning_properties_unique_v<detail::link_decoration_property_t<decorations>...,
                                                      detail::link_decoration_property_t<deco>>,
                   "periscope: duplicate replace-strategy property in >> chain — each of "
                   "OP_name / LP_activate may appear at most once (e.g. not "
-                  "\"Yes\"_op_name together with label{}); LP_style may repeat (bitwise_or)");
+                  "\"Yes\"_name together with label{}); LP_style may repeat (bitwise_or)");
     using normalized = typename detail::normalize_link_decoration<deco>::type;
     node* source = _pending.Source;
     auto pack = std::move(_pending.Decorations);

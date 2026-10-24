@@ -9,37 +9,38 @@ void
 example1_flowchart()
 {
     graph _graph;
-    _graph >> "Hello"_op_name;
+    // Configure graph with title: >> ≡ set (nested enums / UDLs). .set() still works as escape hatch.
+    _graph >> "Hello"_name
+           >> GP_type<>::k_flowchart
+           >> GP_output_format<>::k_markdown
+           >> GP_flowchart_direction<>::k_top_to_down;
 
     // Class defs via fluent create: class_def(graph) >> props (same pack as new_object).
     // Statement form is fine when the handle is unused — builder dtor auto-materializes.
-    class_def(_graph) >> "Start"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "Process"_op_name >> "#F5A623"_mcd_fill >> "#C97E1C"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "Decision"_op_name >> "#7ED321"_mcd_fill >> "#5FA319"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "End"_op_name >> "#D0021B"_mcd_fill >> "#A00115"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(_graph) >> "Start"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Process"_name >> "#F5A623"_fill >> "#C97E1C"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Decision"_name >> "#7ED321"_fill >> "#5FA319"_stroke >> "#fff"_color;
+    class_def(_graph) >> "End"_name >> "#D0021B"_fill >> "#A00115"_stroke >> "#fff"_color;
 
     // Create nodes via fluent builder: node(graph) >> props (same pack / reduce as new_object<node>).
     // Duplicate replace-strategy props are a compile error (two OP_name / two NP_shape).
     // Vector-of-handle props: see example4. new_object<node>(...) remains available.
     // note / class_def share the same object_builder shape; link stays new_object<link>.
-    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
-    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
-    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
-    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
+    node& start = node(_graph) >> "Start"_name >> NP_shape::k_rectangle >> "Start"_class;
+    node& process = node(_graph) >> "Process Data"_name >> NP_shape::k_rectangle >> "Process"_class;
+    node& decision = node(_graph) >> "Decision"_name >> NP_shape::k_diamond >> "Decision"_class;
+    node& end = node(_graph) >> "End"_name >> NP_shape::k_rectangle >> "End"_class;
 
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)).
     // LP_style is bitwise_or: pieces may repeat and OR into one slot (same as composed *_arrow).
-    start >> process >> decision >> "Yes"_op_name >> end;
+    start >> process >> decision >> "Yes"_name >> end;
     // Incomplete chain (no destination) is rejected: typed pending_link<...> is [[nodiscard]]
     // and its destructor aborts if never connected — e.g. the following would fail, not silently drop:
-    //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
+    //   decision >> "No"_name >> LP_style::k_dashed_arrow;
     // Duplicate replace-strategy props in one chain are a compile error, e.g.:
-    //   decision >> "No"_op_name >> label{"x"} >> process;          // two OP_name
+    //   decision >> "No"_name >> label{"x"} >> process;          // two OP_name
     // Piece-wise LP_style folds via bitwise_or (equiv. k_dashed_arrow):
-    decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
-
-    // Configure graph: >> ≡ set (nested enums / UDLs). .set() still works as escape hatch.
-    _graph >> GP_type<>::k_flowchart >> GP_output_format<>::k_markdown >> GP_flowchart_direction<>::k_top_to_down;
+    decision >> "No"_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
     std::cout << "=== Example 1: Flowchart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -80,7 +81,7 @@ class Service
             registered[target] = true;
         }
 
-        // Runtime message via explicit label{}; literals prefer "..."_op_name.
+        // Runtime message via explicit label{}; literals prefer "..."_name.
         // Decorations grow a typed pending_link<...> pack (no std::function erasure).
         // Edges are one-shot: `src >> props >> dst` in a single expression (no named/deferred edge).
         auto& src = hook_graph.access<node>(this_handle);
@@ -123,32 +124,32 @@ example3_gantt()
     graph _graph;
     _graph >> GP_type<>::k_gantt >> GP_output_format<>::k_markdown >> GP_date_format<>::k_hour_minute;
 
-    // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
-    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
-    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
-    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
+    // Three tasks: fluent create with deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
+    node(_graph) >> "Design"_name >> "9:0"_tick_start >> "12:0"_tick_end;
+    node(_graph) >> "Build"_name >> "12:0"_tick_start >> "15:30"_tick_end;
+    node(_graph) >> "Test"_name >> "15:30"_tick_start >> "17:0"_tick_end;
 
     std::cout << "=== Example 3: Gantt Chart ===\n";
     std::cout << _graph.to_string() << std::endl;
 }
 
 // Example 4: subgraph + sequence notes — property_literal<Prop>{ node_a, node_b }
-// packs handles (no .get_handle()). NP_class_def via "Name"_np_class_def literal.
+// packs handles (no .get_handle()). NP_class_def via "Name"_class literal.
 void
 example4_subgraph_and_notes()
 {
     graph _graph;
     _graph >> GP_type<>::k_flowchart >> GP_output_format<>::k_markdown >> GP_flowchart_direction<>::k_top_to_down;
 
-    class_def(_graph) >> "GroupStyle"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(_graph) >> "GroupStyle"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
 
-    node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
-    node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
-    node& c = _graph.new_object<node>("C"_op_name, NP_shape::k_rectangle);
+    node& a = node(_graph) >> "A"_name >> NP_shape::k_rectangle;
+    node& b = node(_graph) >> "B"_name >> NP_shape::k_rectangle;
+    node& c = node(_graph) >> "C"_name >> NP_shape::k_rectangle;
 
-    // One NP_subgraph_node chunk from node refs; class style via "Name"_np_class_def.
-    node& group = _graph.new_object<node>(
-      "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
+    // One NP_subgraph_node chunk from node refs; class style via "Name"_class.
+    node& group =
+      node(_graph) >> "Group"_name >> property_literal<NP_subgraph_node>{ a, b, c } >> "GroupStyle"_class;
 
     std::cout << "=== Example 4: subgraph + classDef literal ===\n";
     std::cout << "subgraph member count (expect 3): " << group.get<NP_subgraph_node>().Value.size() << "\n";
@@ -157,12 +158,12 @@ example4_subgraph_and_notes()
     // Sequence note spanning participants via MNP_basis handle pack
     graph seq;
     seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
-    node& client = seq.new_object<node>("Client"_op_name);
-    node& server = seq.new_object<node>("Server"_op_name);
+    node& client = node(seq) >> "Client"_name;
+    node& server = node(seq) >> "Server"_name;
     // Statement form: unused note handles — builder dtor auto-materializes into the graph.
-    note(seq) >> "shared context"_op_name >> property_literal<MNP_basis>{ client, server };
+    note(seq) >> "shared context"_name >> property_literal<MNP_basis>{ client, server };
     // Single-participant note with orient
-    note(seq) >> "on client"_op_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
+    note(seq) >> "on client"_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
 
     std::cout << "=== Example 4b: sequence notes ===\n";
     std::cout << seq.to_string() << std::endl;

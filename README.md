@@ -1,214 +1,152 @@
 # Periscope
 
-A C++ template library for generating Mermaid diagrams, supporting flowcharts, sequence diagrams, and gantt charts.
+C++20 header-only library that builds Mermaid diagrams (flowchart, sequence, gantt) from typed graph objects.
 
-## Build and use
-
-Periscope is a header-only CMake `INTERFACE` library. From this repo:
+## Build
 
 ```bash
-cmake -S . -B build
-cmake --build build
-./build/bin/PERISCOPE_SANDBOX   # optional demo (PERISCOPE_BUILD_SANDBOX=ON by default)
+cmake -S . -B build && cmake --build build
+./build/bin/PERISCOPE_SANDBOX
 ```
 
-From another CMake project (`add_subdirectory`, `FetchContent`, or after `cmake --install` + `find_package(Periscope)`):
+In another project (`add_subdirectory` / `FetchContent` / `find_package(Periscope)`):
 
 ```cmake
-find_package(Periscope REQUIRED)  # or: add_subdirectory / FetchContent
 target_link_libraries(your_target PRIVATE Periscope::periscope)
 ```
 
-Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `include/` path and requires C++20.
+`#include "periscope.h"` — linking `Periscope::periscope` pulls in `include/` and C++20.
 
+## API at a glance
 
-## Example 1: Flowchart (using int as handle)
+| Spell | Meaning |
+| --- | --- |
+| `Object(graph) >> props…` | create `node` / `note` / `class_def` (assign or discard; bare `Object(g)` aborts) |
+| `a >> b >> c` | default edges between consecutive nodes |
+| `a >> "Yes"_name >> LP_style::k_dashed >> b` | decorations sit between nodes |
+| `graph >> GP_…` | configure (`>>` ≡ `set` on `graph&`) |
+| `"…"_name` / `_class` / `_fill` / `_stroke` / `_color` / `_tick_start` / `_tick_end` | short string UDLs → property literals |
+| `new_object_at` / `.set<Prop>(…)` / `new_object<link>` | escape hatches; **`link` stays `new_object<link>`** |
+| `label{ runtime_string }` | runtime edge/node name (no bare `std::string` on `>>`) |
+| `property_literal<NP_subgraph_node>{ a, b }` | vector-of-handle props |
 
-Create a flowchart with `int` handles. Prefer fluent create for graph objects:
+Mermaid under each example is the verbatim `to_string()` body from running that snippet alone.
 
-`node& n = node(_graph) >> "Name"_op_name >> NP_shape::k_rectangle;`
-
-The same create-intermediary shape works for **`node`**, **`note`**, and **`class_def`**:
-`Object(graph) >> props…` — the type name *is* the factory (graph& constructor), `>>` grows a
-typed `object_builder<Object, …>` pack that materializes via `new_object<Object>`.
-Materialize by assigning (`Object& o = Object(g) >> props…`) **or** by discarding the finished
-chain as a statement (`Object(g) >> props…;` — builder destructor auto-materializes, like an
-unused `new_object` return). Bare `Object(g)` with no `>>` still aborts (`~create_seed`).
-Shared create-seed state (graph pointer, `new_object` trampoline, move, incomplete-seed abort)
-lives in CRTP base `create_seed<Object>` (`include/object/periscope_create_seed.h`); each type
-keeps only a thin `Object(graph&)` trampoline plus its `to_string_impl`.
-`new_object<Object>(...)` still works directly. **`link` stays `new_object<link>`** — edge
-`>>` already owns that spelling, so there is no `link(graph) >> …` create (`link` inherits
-plain `object<link>`, not `create_seed`).
-The builder is a **distinct type** until it materializes to `Object&`, so object-prop `>>`
-does not steal one-shot edge `>>`. Properties are the same deduced pack as `new_object`
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or `"Name"_np_class_def`).
-Replace-strategy owning props (`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most
-once** in a `new_object` / `Object(graph) >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so
-style pieces may repeat and OR into one slot. Sequential `.set()` after create is still fine
-for later mutation. **Graph config** uses the same `>>` spelling: `graph >> prop…` means
-`set` (`>>` ≡ `set` on `graph&`). Left operand is `graph&`, so it does not collide with edge
-`>>` (`node&`) or `Object(graph) >>` create. `.set(...)` remains for explicit template forms
-(e.g. `set<OP_name>(runtime_string)`).
-Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
-`std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
-`label{}`).
+## Example 1 — Flowchart
 
 ```cpp
 #include "periscope.h"
 #include <iostream>
 
+using namespace periscope;
+
 int main() {
-    using namespace periscope;
-
     graph _graph;
-
-    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle;
-    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle;
-    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond;
-    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle;
-
-    // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
-    start >> process >> decision >> "Yes"_op_name >> end;
-    // LP_style pieces OR (same as k_dashed_arrow):
-    decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
-
-    _graph >> GP_type<>::k_flowchart
+    _graph >> "Hello"_name
+           >> GP_type<>::k_flowchart
            >> GP_output_format<>::k_markdown
            >> GP_flowchart_direction<>::k_top_to_down;
+
+    class_def(_graph) >> "Start"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Process"_name >> "#F5A623"_fill >> "#C97E1C"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Decision"_name >> "#7ED321"_fill >> "#5FA319"_stroke >> "#fff"_color;
+    class_def(_graph) >> "End"_name >> "#D0021B"_fill >> "#A00115"_stroke >> "#fff"_color;
+
+    node& start = node(_graph) >> "Start"_name >> NP_shape::k_rectangle >> "Start"_class;
+    node& process = node(_graph) >> "Process Data"_name >> NP_shape::k_rectangle >> "Process"_class;
+    node& decision = node(_graph) >> "Decision"_name >> NP_shape::k_diamond >> "Decision"_class;
+    node& end = node(_graph) >> "End"_name >> NP_shape::k_rectangle >> "End"_class;
+
+    start >> process >> decision >> "Yes"_name >> end;
+    decision >> "No"_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
+
     std::cout << _graph.to_string() << std::endl;
-    return 0;
 }
 ```
 
-**Output:**
-
 ```mermaid
+---
+title: Hello
+---
 flowchart TD
-
-0@{ shape: rect, label: Start }
-1@{ shape: rect, label: Process Data }
-2@{ shape: diamond, label: Decision }
-3@{ shape: rect, label: End }
-0 --> 1
-1 --> 2
-2 --"Yes"--> 3
-2 -."No".-> 1
+classDef StartClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
+classDef ProcessClass fill:#F5A623,stroke:#C97E1C,color:#fff
+classDef DecisionClass fill:#7ED321,stroke:#5FA319,color:#fff
+classDef EndClass fill:#D0021B,stroke:#A00115,color:#fff
+4@{ shape: rect, label: Start }
+5@{ shape: rect, label: Process Data }
+6@{ shape: diamond, label: Decision }
+7@{ shape: rect, label: End }
+4 --> 5
+5 --> 6
+6 --"Yes"--> 7
+6 -."No".-> 5
+class 4 StartClass
+class 5 ProcessClass
+class 6 DecisionClass
+class 7 EndClass
 ```
 
-## Example 2: Sequence Diagram (using pointer as handle, simulating runtime hooks)
-
-Hook object interactions during program execution, using object pointers as handles.
-Runtime strings use `.set<OP_name>(...)` after `new_object_at` (or `label{ msg }` on
-`>>`); compile-time literals prefer `"..."_op_name`. `LP_activate::*` is a nested
-enum decoration in the same one-shot chain.
+## Example 2 — Sequence
 
 ```cpp
 #include "periscope.h"
 #include <iostream>
-#include <map>
 
-class Service {
-public:
-    std::string name;
-    Service(const std::string& n) : name(n) {}
-
-    static graph<const void*>& get_hook_graph() {
-        static graph<const void*> hook_graph;
-        return hook_graph;
-    }
-
-    void send_request(Service* target, const std::string& msg, bool activate_target = false) {
-        auto& hook_graph = get_hook_graph();
-        static std::map<const void*, bool> registered;
-
-        handle<const void*> this_handle(reinterpret_cast<const void*>(this));
-        handle<const void*> target_handle(reinterpret_cast<const void*>(target));
-
-        // Same deduced pack as new_object; runtime name via sequential .set after create.
-        if (!registered[this]) {
-            hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
-            registered[this] = true;
-        }
-        if (!registered[target]) {
-            hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
-            registered[target] = true;
-        }
-
-        auto& src = hook_graph.access<node>(this_handle);
-        auto& dst = hook_graph.access<node>(target_handle);
-        if (activate_target)
-            src >> LP_activate::k_activate >> label{ msg } >> dst;
-        else
-            src >> label{ msg } >> dst;
-    }
-
-    static void print_graph() {
-        auto& hook_graph = get_hook_graph();
-        hook_graph >> GP_type<>::k_sequence
-                   >> GP_output_format<>::k_markdown
-                   >> GP_sequence_show_number<>::k_on;
-        std::cout << hook_graph.to_string() << std::endl;
-    }
-};
+using namespace periscope;
 
 int main() {
-    Service client("Client");
-    Service server("Server");
-    Service database("Database");
+    graph seq;
+    seq >> GP_type<>::k_sequence
+        >> GP_output_format<>::k_markdown
+        >> GP_sequence_show_number<>::k_on;
 
-    client.send_request(&server, "Request Data", true);
-    server.send_request(&database, "Query", true);
-    database.send_request(&server, "Result");
-    server.send_request(&client, "Response");
+    node& client = node(seq) >> "Client"_name;
+    node& server = node(seq) >> "Server"_name;
+    node& database = node(seq) >> "Database"_name;
 
-    Service::print_graph();
-    return 0;
+    client >> LP_activate::k_activate >> "Request Data"_name >> server;
+    server >> LP_activate::k_activate >> "Query"_name >> database;
+    database >> "Result"_name >> server;
+    server >> "Response"_name >> client;
+
+    std::cout << seq.to_string() << std::endl;
 }
 ```
 
-**Output:**
-
 ```mermaid
-sequenceDiagram 
+sequenceDiagram
 autonumber
-participant 0x16fb52dc8 as Client
-participant 0x16fb52d88 as Server
-participant 0x16fb52d58 as Database
-0x16fb52dc8 ->>+ 0x16fb52d88 : Request Data
-0x16fb52d88 ->>+ 0x16fb52d58 : Query
-0x16fb52d58 ->> 0x16fb52d88 : Result
-0x16fb52d88 ->> 0x16fb52dc8 : Response
+participant OBJ0 as Client
+participant OBJ1 as Server
+participant OBJ2 as Database
+OBJ0 ->>+ OBJ1 : Request Data
+OBJ1 ->>+ OBJ2 : Query
+OBJ2 ->> OBJ1 : Result
+OBJ1 ->> OBJ0 : Response
 ```
 
-## Example 3: Gantt Chart (using int as handle)
-
-Create a gantt chart with time-tick start/end on each task node. Ticks are
-formatted to match `GP_date_format` (zero-padded `HH:mm` or `MM-DD`):
+## Example 3 — Gantt
 
 ```cpp
 #include "periscope.h"
 #include <iostream>
 
-int main() {
-    using namespace periscope;
+using namespace periscope;
 
+int main() {
     graph _graph;
     _graph >> GP_type<>::k_gantt
            >> GP_output_format<>::k_markdown
            >> GP_date_format<>::k_hour_minute;
 
-    // Pack name + ticks via deduced UDLs (mirrors OP_/NP_ naming)
-    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
-    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
-    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
+    node(_graph) >> "Design"_name >> "9:0"_tick_start >> "12:0"_tick_end;
+    node(_graph) >> "Build"_name >> "12:0"_tick_start >> "15:30"_tick_end;
+    node(_graph) >> "Test"_name >> "15:30"_tick_start >> "17:0"_tick_end;
 
     std::cout << _graph.to_string() << std::endl;
-    return 0;
 }
 ```
-
-**Output:**
 
 ```mermaid
 gantt
@@ -218,69 +156,62 @@ gantt
     Test : 15:30, 17:00
 ```
 
-## Example 4: classDef, subgraph, and sequence notes
+## Example 4 — classDef, subgraph, notes
 
-Style nodes with `"Name"_np_class_def` (literal). Vector-of-handle props take
-`property_literal<Prop>{ node_a, node_b }` — no `.get_handle()` at the call site
-(`NP_subgraph_node`, `MNP_basis`).
+Vector-of-handle props: `property_literal<Prop>{ node_a, node_b }` (no `.get_handle()`).
 
 ```cpp
 #include "periscope.h"
 #include <iostream>
 
-int main() {
-    using namespace periscope;
+using namespace periscope;
 
+int main() {
     graph flow;
     flow >> GP_type<>::k_flowchart
          >> GP_output_format<>::k_markdown
          >> GP_flowchart_direction<>::k_top_to_down;
 
-    flow.new_object<class_def>(
-        "GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+    class_def(flow) >> "GroupStyle"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
 
-    node& a = flow.new_object<node>("A"_op_name, NP_shape::k_rectangle);
-    node& b = flow.new_object<node>("B"_op_name, NP_shape::k_rectangle);
-    node& c = flow.new_object<node>("C"_op_name, NP_shape::k_rectangle);
-    flow.new_object<node>(
-        "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
+    node& a = node(flow) >> "A"_name >> NP_shape::k_rectangle;
+    node& b = node(flow) >> "B"_name >> NP_shape::k_rectangle;
+    node& c = node(flow) >> "C"_name >> NP_shape::k_rectangle;
+    node(flow) >> "Group"_name >> property_literal<NP_subgraph_node>{ a, b, c } >> "GroupStyle"_class;
 
     std::cout << flow.to_string() << std::endl;
 
     graph seq;
     seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
-    node& client = seq.new_object<node>("Client"_op_name);
-    node& server = seq.new_object<node>("Server"_op_name);
-    seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
-    seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
+    node& client = node(seq) >> "Client"_name;
+    node& server = node(seq) >> "Server"_name;
+    note(seq) >> "shared context"_name >> property_literal<MNP_basis>{ client, server };
+    note(seq) >> "on client"_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
 
     std::cout << seq.to_string() << std::endl;
-    return 0;
 }
 ```
 
-**Output:**
-
 ```mermaid
 flowchart TD
-
 classDef GroupStyleClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-0@{ shape: rect, label: A }
-1@{ shape: rect, label: B }
-2@{ shape: rect, label: C }
-subgraph 3["Group"]
-0
+1@{ shape: rect, label: A }
+2@{ shape: rect, label: B }
+3@{ shape: rect, label: C }
+subgraph 4["Group"]
 1
 2
+3
 end
-class 3 GroupStyleClass
+
+class 4 GroupStyleClass
 ```
 
 ```mermaid
 sequenceDiagram
 
-participant 0 as Client
-participant 1 as Server
-Note over 0, 1 : shared context
-Note right of 0 : on client
+participant OBJ5 as Client
+participant OBJ6 as Server
+Note over OBJ5, OBJ6 : shared context
+Note right of OBJ5 : on client
 ```
