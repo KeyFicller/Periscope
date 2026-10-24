@@ -24,12 +24,29 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 ## Example 1: Flowchart (using int as handle)
 
-Create a flowchart with `int` handles. Properties are applied in one deduced pack
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or
-`"Name"_np_class_def` for class styling). Replace-strategy owning props (`OP_name` /
-`NP_shape` / `LP_activate` / …) appear **at most once** in a `new_object` / `>>` pack;
-`LP_style` uses `bitwise_or` so style pieces may repeat and OR into one slot. Sequential
-`.set()` after create is still fine for later mutation.
+Create a flowchart with `int` handles. Prefer fluent create for graph objects:
+
+`node& n = node(_graph) >> "Name"_op_name >> NP_shape::k_rectangle;`
+
+The same create-intermediary shape works for **`node`**, **`note`**, and **`class_def`**:
+`Object(graph) >> props…` — the type name *is* the factory (graph& constructor), `>>` grows a
+typed `object_builder<Object, …>` pack that materializes via `new_object<Object>`.
+Materialize by assigning (`Object& o = Object(g) >> props…`) **or** by discarding the finished
+chain as a statement (`Object(g) >> props…;` — builder destructor auto-materializes, like an
+unused `new_object` return). Bare `Object(g)` with no `>>` still aborts (`~create_seed`).
+Shared create-seed state (graph pointer, `new_object` trampoline, move, incomplete-seed abort)
+lives in CRTP base `create_seed<Object>` (`include/object/periscope_create_seed.h`); each type
+keeps only a thin `Object(graph&)` trampoline plus its `to_string_impl`.
+`new_object<Object>(...)` still works directly. **`link` stays `new_object<link>`** — edge
+`>>` already owns that spelling, so there is no `link(graph) >> …` create (`link` inherits
+plain `object<link>`, not `create_seed`).
+The builder is a **distinct type** until it materializes to `Object&`, so object-prop `>>`
+does not steal one-shot edge `>>`. Properties are the same deduced pack as `new_object`
+(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or `"Name"_np_class_def`).
+Replace-strategy owning props (`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most
+once** in a `new_object` / `Object(graph) >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so
+style pieces may repeat and OR into one slot. Sequential `.set()` after create is still fine
+for later mutation.
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
 `std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
 `label{}`).
@@ -43,10 +60,10 @@ int main() {
 
     graph _graph;
 
-    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
-    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
-    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
-    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
+    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle;
+    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle;
+    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond;
+    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle;
 
     // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
     start >> process >> decision >> "Yes"_op_name >> end;

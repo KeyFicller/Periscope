@@ -11,18 +11,21 @@ example1_flowchart()
     graph _graph;
     _graph.set("Hello"_op_name);
 
-    // Class defs + literal NP_class_def bind ("Name"_np_class_def).
-    _graph.new_object<class_def>("Start"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
-    _graph.new_object<class_def>("Process"_op_name, "#F5A623"_mcd_fill, "#C97E1C"_mcd_stroke, "#fff"_mcd_color);
-    _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
-    _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
+    // Class defs via fluent create: class_def(graph) >> props (same pack as new_object).
+    // Statement form is fine when the handle is unused — builder dtor auto-materializes.
+    class_def(_graph) >> "Start"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(_graph) >> "Process"_op_name >> "#F5A623"_mcd_fill >> "#C97E1C"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(_graph) >> "Decision"_op_name >> "#7ED321"_mcd_fill >> "#5FA319"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(_graph) >> "End"_op_name >> "#D0021B"_mcd_fill >> "#A00115"_mcd_stroke >> "#fff"_mcd_color;
 
-    // Create nodes: pack name / shape / "Name"_np_class_def. Duplicate replace-strategy props
-    // are a compile error (two OP_name / two NP_shape). Vector-of-handle props: see example4.
-    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
-    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
-    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
-    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
+    // Create nodes via fluent builder: node(graph) >> props (same pack / reduce as new_object<node>).
+    // Duplicate replace-strategy props are a compile error (two OP_name / two NP_shape).
+    // Vector-of-handle props: see example4. new_object<node>(...) remains available.
+    // note / class_def share the same object_builder shape; link stays new_object<link>.
+    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
+    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
+    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
+    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
 
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)).
     // LP_style is bitwise_or: pieces may repeat and OR into one slot (same as composed *_arrow).
@@ -137,7 +140,7 @@ example4_subgraph_and_notes()
     graph _graph;
     _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
 
-    _graph.new_object<class_def>("GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+    class_def(_graph) >> "GroupStyle"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
 
     node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
     node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
@@ -156,9 +159,10 @@ example4_subgraph_and_notes()
     seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
     node& client = seq.new_object<node>("Client"_op_name);
     node& server = seq.new_object<node>("Server"_op_name);
-    seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
+    // Statement form: unused note handles — builder dtor auto-materializes into the graph.
+    note(seq) >> "shared context"_op_name >> property_literal<MNP_basis>{ client, server };
     // Single-participant note with orient
-    seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
+    note(seq) >> "on client"_op_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
 
     std::cout << "=== Example 4b: sequence notes ===\n";
     std::cout << seq.to_string() << std::endl;

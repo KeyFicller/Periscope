@@ -286,4 +286,7 @@ class graph
     handle_manager<underlying_type> m_handle_manager;
     std::vector<std::unique_ptr<base_object>> m_elements;
 };
-}
+} // namespace periscope
+
+// object_builder + Object(graph&) create-intermediary for node/note/class_def (needs complete graph<>)
+#include "object/periscope_object_builder.h"
