@@ -31,6 +31,9 @@ Create a flowchart with `int` handles. Prefer fluent create for graph objects:
 The same create-intermediary shape works for **`node`**, **`note`**, and **`class_def`**:
 `Object(graph) >> props…` — the type name *is* the factory (graph& constructor), `>>` grows a
 typed `object_builder<Object, …>` pack that materializes via `new_object<Object>`.
+Materialize by assigning (`Object& o = Object(g) >> props…`) **or** by discarding the finished
+chain as a statement (`Object(g) >> props…;` — builder destructor auto-materializes, like an
+unused `new_object` return). Bare `Object(g)` with no `>>` still aborts (`~create_seed`).
 Shared create-seed state (graph pointer, `new_object` trampoline, move, incomplete-seed abort)
 lives in CRTP base `create_seed<Object>` (`include/object/periscope_create_seed.h`); each type
 keeps only a thin `Object(graph&)` trampoline plus its `to_string_impl`.

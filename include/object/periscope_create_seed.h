@@ -38,14 +38,15 @@ class create_seed : public object<Derived>
         return *this;
     }
 
-    // Incomplete Object(graph) temporary must materialize to Object& (via >> + conversion).
-    // Abort (not throw): safe if destruction runs during another exception unwind.
+    // Bare Object(graph) with no `>>` props is incomplete — abort (not throw: safe if
+    // destruction runs during another exception unwind). A finished `Object(g) >> props`
+    // chain auto-materializes in ~object_builder (statement or assign both OK).
     ~create_seed()
     {
         if (m_create_fn == nullptr)
             return;
-        std::fputs("periscope: incomplete Object(graph) — discarded without materializing to Object& "
-                   "(write `Object& o = Object(g) >> props`, not `Object(g) >> props`)\n",
+        std::fputs("periscope: incomplete Object(graph) — bare create-seed discarded without `>>` props "
+                   "(write `Object(g) >> props…`, not bare `Object(g)`)\n",
                    stderr);
         std::abort();
     }

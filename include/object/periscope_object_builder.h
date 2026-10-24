@@ -40,13 +40,15 @@ concept object_decoration = object_property_enum<Object, t> || object_property_l
 
 // object_builder is a typed incomplete create used only as a temporary in a one-shot
 // `Object(graph) >> props…` expression. Distinct from pending_link / edge `>>`.
-// Materializes to Object& via conversion (calls new_object<Object>, then apply_pack_arg).
-// Incomplete builders must not be discarded: [[nodiscard]] + destructor abort if still live.
+// Materializes via new_object<Object> + apply_pack_arg — either by converting to Object&
+// (`Object& o = Object(g) >> props`) or automatically in the destructor when the finished
+// chain is discarded as a statement (`Object(g) >> props;`, like unused new_object).
 //
 // Shared by node / note / class_def. link is intentionally excluded — edge `>>` already
 // owns that spelling; keep link create as new_object<link>.
+// Bare Object(graph) with no `>>` still aborts in ~create_seed (incomplete seed).
 template<typename Object, typename... props>
-struct [[nodiscard("incomplete Object(graph) builder: assign to Object& (or cast) to materialize")]] object_builder
+struct object_builder
 {
     void* Graph = nullptr;
     Object& (*CreateFn)(void*) = nullptr;
@@ -80,7 +82,26 @@ struct [[nodiscard("incomplete Object(graph) builder: assign to Object& (or cast
 
     // Materialize into the owning graph (same pack rules as new_object<Object>).
     // Rvalue-only so a named builder cannot be converted twice.
-    operator Object&() &&
+    operator Object&() && { return materialize(); }
+
+    // Finished chain discarded as a statement: auto-materialize (same as unused new_object).
+    ~object_builder()
+    {
+        if (Graph == nullptr)
+            return;
+        (void)materialize();
+    }
+
+    void release() noexcept
+    {
+        Graph = nullptr;
+        CreateFn = nullptr;
+    }
+
+  private:
+    // Shared by conversion and destructor — Graph/CreateFn cleared before create so a
+    // re-entrant / double path cannot materialize twice.
+    Object& materialize()
     {
         void* g = std::exchange(Graph, nullptr);
         auto* create = std::exchange(CreateFn, nullptr);
@@ -89,24 +110,6 @@ struct [[nodiscard("incomplete Object(graph) builder: assign to Object& (or cast
         std::apply([&obj](auto&&... _p) { (obj.apply_pack_arg(std::forward<decltype(_p)>(_p)), ...); },
                    std::move(pack));
         return obj;
-    }
-
-    // A non-null Graph here means the builder never materialized (silent no-op would drop props).
-    // Abort (not throw): safe if destruction runs during another exception unwind.
-    ~object_builder()
-    {
-        if (Graph == nullptr)
-            return;
-        std::fputs("periscope: incomplete Object(graph) builder — discarded without materializing "
-                   "(write `Object& o = Object(g) >> props`, not `Object(g) >> props`)\n",
-                   stderr);
-        std::abort();
-    }
-
-    void release() noexcept
-    {
-        Graph = nullptr;
-        CreateFn = nullptr;
     }
 };
 
