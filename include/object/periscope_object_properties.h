@@ -57,7 +57,7 @@ using property_of_t = decltype(periscope_property_of(std::declval<e>()));
 // property_literal tags a value with its owning property so set("..."_op_name) /
 // set("9:0"_np_time_tick_start) deduce the property without an explicit template arg.
 // For vector-of-handle props (NP_subgraph_node / MNP_basis), a pack of get_handle()
-// owners (node&, note&, …) builds the vector — no .get_handle() at the call site.
+// owners (Node&, note&, …) builds the vector — no .get_handle() at the call site.
 template<typename prop>
 struct property_literal
 {

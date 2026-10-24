@@ -8,11 +8,11 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
-// node is graph node object
-class node : public object<node>
+// Node is the graph-node object type (factory is constexpr node(...))
+class Node : public object<Node>
 {
   public:
-    node() { set<OP_printable>(true); }
+    Node() { set<OP_printable>(true); }
 
   public:
     // to_string_impl is implementation of object::to_string_impl

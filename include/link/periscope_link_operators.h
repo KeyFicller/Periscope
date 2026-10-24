@@ -88,15 +88,15 @@ using link_decoration_property_t = typename link_decoration_property<std::remove
 template<typename... decorations>
 struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b)")]] pending_link
 {
-    node* Source = nullptr;
+    Node* Source = nullptr;
     std::tuple<decorations...> Decorations{};
 
     pending_link() = default;
-    explicit pending_link(node* _source)
+    explicit pending_link(Node* _source)
       : Source(_source)
     {
     }
-    pending_link(node* _source, std::tuple<decorations...> _decorations)
+    pending_link(Node* _source, std::tuple<decorations...> _decorations)
       : Source(_source)
       , Decorations(std::move(_decorations))
     {
@@ -138,7 +138,7 @@ struct [[nodiscard("incomplete >> chain: end with a target node (a >> props >> b
 class link_ref
 {
   public:
-    link_ref(link& _link, node& _target)
+    link_ref(link& _link, Node& _target)
       : m_link(&_link)
       , m_target(&_target)
     {
@@ -149,7 +149,7 @@ class link_ref
     operator link&() const { return *m_link; }
 
     // target is the last node of the chain
-    node& target() const { return *m_target; }
+    Node& target() const { return *m_target; }
 
     // set forwards to link::set so a created edge can still be configured
     template<typename prop, typename value>
@@ -177,17 +177,17 @@ class link_ref
 
   private:
     link* m_link;
-    node* m_target;
+    Node* m_target;
 };
 
 namespace detail {
 // connect creates the link for a completed pending edge (typed decoration pack)
 template<typename... decorations>
 link_ref
-connect(pending_link<decorations...> _pending, node& _target)
+connect(pending_link<decorations...> _pending, Node& _target)
 {
     // Release first so ~pending_link is inert even if create_link / set throws.
-    node& source = *_pending.Source;
+    Node& source = *_pending.Source;
     auto decorations_pack = std::move(_pending.Decorations);
     _pending.release();
     if (source.owner() == nullptr || source.owner() != _target.owner())
@@ -200,7 +200,7 @@ connect(pending_link<decorations...> _pending, node& _target)
 }
 
 inline pending_link<>
-start(node& _source)
+start(Node& _source)
 {
     return pending_link<>{ &_source };
 }
@@ -249,7 +249,7 @@ operator>>(pending_link<decorations...>&& _pending, deco _decoration)
                   "OP_name / LP_activate may appear at most once (e.g. not "
                   "\"Yes\"_op_name together with label{}); LP_style may repeat (bitwise_or)");
     using normalized = typename detail::normalize_link_decoration<deco>::type;
-    node* source = _pending.Source;
+    Node* source = _pending.Source;
     auto pack = std::move(_pending.Decorations);
     _pending.release();
     return pending_link<decorations..., normalized>{
@@ -264,7 +264,7 @@ operator>>(pending_link<decorations...>&& _pending, deco _decoration)
 template<typename decoration>
     requires link_decoration<decoration>
 auto
-operator>>(node& _source, decoration _decoration)
+operator>>(Node& _source, decoration _decoration)
 {
     return detail::start(_source) >> std::move(_decoration);
 }
@@ -281,19 +281,19 @@ operator>>(const link_ref& _chain, decoration _decoration)
 
 template<typename... decorations>
 link_ref
-operator>>(pending_link<decorations...>&& _pending, node& _target)
+operator>>(pending_link<decorations...>&& _pending, Node& _target)
 {
     return detail::connect(std::move(_pending), _target); // releases before destroy
 }
 
 inline link_ref
-operator>>(node& _source, node& _target)
+operator>>(Node& _source, Node& _target)
 {
     return detail::connect(detail::start(_source), _target);
 }
 
 inline link_ref
-operator>>(const link_ref& _chain, node& _target)
+operator>>(const link_ref& _chain, Node& _target)
 {
     return detail::connect(detail::start(_chain.target()), _target);
 }

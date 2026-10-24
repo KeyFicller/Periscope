@@ -17,13 +17,13 @@ example1_flowchart()
     _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    // Create nodes via fluent builder (same pack / reduce rules as new_object<node>).
+    // Create nodes via fluent builder: node(graph) >> props (same pack / reduce as new_object<Node>).
     // Duplicate replace-strategy props are a compile error (two OP_name / two NP_shape).
-    // Vector-of-handle props: see example4. new_object<node>(...) remains available.
-    node& start = _graph.node() >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
-    node& process = _graph.node() >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
-    node& decision = _graph.node() >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
-    node& end = _graph.node() >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
+    // Vector-of-handle props: see example4. new_object<Node>(...) remains available.
+    Node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
+    Node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
+    Node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
+    Node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
 
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)).
     // LP_style is bitwise_or: pieces may repeat and OR into one slot (same as composed *_arrow).
@@ -70,19 +70,19 @@ class Service
         // new_object_at accepts the same deduced property pack as new_object; runtime
         // strings still use explicit set<OP_name> (no parallel property_literal factory).
         if (!registered[this]) {
-            hook_graph.new_object_at<node>(this_handle).set<OP_name>(name);
+            hook_graph.new_object_at<Node>(this_handle).set<OP_name>(name);
             registered[this] = true;
         }
         if (!registered[target]) {
-            hook_graph.new_object_at<node>(target_handle).set<OP_name>(target->name);
+            hook_graph.new_object_at<Node>(target_handle).set<OP_name>(target->name);
             registered[target] = true;
         }
 
         // Runtime message via explicit label{}; literals prefer "..."_op_name.
         // Decorations grow a typed pending_link<...> pack (no std::function erasure).
         // Edges are one-shot: `src >> props >> dst` in a single expression (no named/deferred edge).
-        auto& src = hook_graph.access<node>(this_handle);
-        auto& dst = hook_graph.access<node>(target_handle);
+        auto& src = hook_graph.access<Node>(this_handle);
+        auto& dst = hook_graph.access<Node>(target_handle);
         if (activate_target)
             src >> LP_activate::k_activate >> label{ msg } >> dst;
         else
@@ -122,9 +122,9 @@ example3_gantt()
     _graph.set(GP_type<>::k_gantt).set(GP_output_format<>::k_markdown).set(GP_date_format<>::k_hour_minute);
 
     // Three tasks: pack name + ticks via deduced UDLs (runtime vars: explicit set<NP_time_tick_*> / set<OP_name>)
-    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
-    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
-    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
+    _graph.new_object<Node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
+    _graph.new_object<Node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
+    _graph.new_object<Node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
 
     std::cout << "=== Example 3: Gantt Chart ===\n";
     std::cout << _graph.to_string() << std::endl;
@@ -140,12 +140,12 @@ example4_subgraph_and_notes()
 
     _graph.new_object<class_def>("GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
 
-    node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
-    node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
-    node& c = _graph.new_object<node>("C"_op_name, NP_shape::k_rectangle);
+    Node& a = _graph.new_object<Node>("A"_op_name, NP_shape::k_rectangle);
+    Node& b = _graph.new_object<Node>("B"_op_name, NP_shape::k_rectangle);
+    Node& c = _graph.new_object<Node>("C"_op_name, NP_shape::k_rectangle);
 
     // One NP_subgraph_node chunk from node refs; class style via "Name"_np_class_def.
-    node& group = _graph.new_object<node>(
+    Node& group = _graph.new_object<Node>(
       "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
 
     std::cout << "=== Example 4: subgraph + classDef literal ===\n";
@@ -155,8 +155,8 @@ example4_subgraph_and_notes()
     // Sequence note spanning participants via MNP_basis handle pack
     graph seq;
     seq.set(GP_type<>::k_sequence).set(GP_output_format<>::k_markdown);
-    node& client = seq.new_object<node>("Client"_op_name);
-    node& server = seq.new_object<node>("Server"_op_name);
+    Node& client = seq.new_object<Node>("Client"_op_name);
+    Node& server = seq.new_object<Node>("Server"_op_name);
     seq.new_object<note>("shared context"_op_name, property_literal<MNP_basis>{ client, server });
     // Single-participant note with orient
     seq.new_object<note>("on client"_op_name, property_literal<MNP_basis>{ client }, MNP_orient::k_right);
