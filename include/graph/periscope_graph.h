@@ -19,6 +19,10 @@
 namespace periscope {
 // ------------------------ Main template -----------------------
 
+// Forward declare so graph::node() can return a builder without defining it yet.
+template<typename underlying_type, typename... props>
+class node_builder;
+
 // graph is container for nodes and links with graph type management
 template<typename underlying_type>
 class graph
@@ -141,7 +145,7 @@ class graph
             enum_type date_fmt = GP_date_format<underlying_type>::date_format::k_hour_minute;
             if (this->template has<GP_date_format<underlying_type>>())
                 date_fmt = this->template get<GP_date_format<underlying_type>>().Value;
-            traverser<node>::traverse(*this, [&str, date_fmt](node& n) {
+            traverser<periscope::node>::traverse(*this, [&str, date_fmt](periscope::node& n) {
                 std::string label_str = n.template get<OP_name>().Value;
                 std::string start_tick_str;
                 std::string end_tick_str;
@@ -156,7 +160,8 @@ class graph
                 str += std::format("    {} : {}, {}\n", label_str, start_tick_str, end_tick_str);
             });
         } else {
-            traverser<node>::traverse(*this, [&str](node& node) { str += std::format("{}\n", node.to_string()); });
+            traverser<periscope::node>::traverse(
+              *this, [&str](periscope::node& n) { str += std::format("{}\n", n.to_string()); });
         }
 
         // Draw links and notes
@@ -164,10 +169,9 @@ class graph
           *this, [&str](base_object& object) { str += std::format("{}\n", object.to_string()); });
 
         // Assign node names to class definitions
-        traverser<node>::traverse(*this, [&str](node& node) {
-            if (node.has<NP_class_def>()) {
-                str +=
-                  std::format("class {} {}Class\n", node.get_handle()->print(), node.template _V_str<NP_class_def>());
+        traverser<periscope::node>::traverse(*this, [&str](periscope::node& n) {
+            if (n.has<NP_class_def>()) {
+                str += std::format("class {} {}Class\n", n.get_handle()->print(), n.template _V_str<NP_class_def>());
             }
         });
         return str;
@@ -200,6 +204,13 @@ class graph
     };
 
   public:
+    // node() starts a fluent node builder (primary DX for node create):
+    //   node& start = _graph.node() >> "Start"_op_name >> NP_shape::k_rectangle;
+    // Same deduced pack / reduce rules as new_object<node>. The builder is a distinct type
+    // until it materializes to node& — so node-prop >> does not steal one-shot edge >>.
+    // new_object<node>(...) remains supported (builder calls it under the hood).
+    node_builder<underlying_type> node();
+
     // new_object creates an object and optionally applies deduced properties in one call,
     // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
     // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
@@ -286,4 +297,7 @@ class graph
     handle_manager<underlying_type> m_handle_manager;
     std::vector<std::unique_ptr<base_object>> m_elements;
 };
-}
+} // namespace periscope
+
+// node_builder + graph::node() (needs complete graph<>)
+#include "node/periscope_node_builder.h"

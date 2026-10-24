@@ -17,12 +17,13 @@ example1_flowchart()
     _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
     _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    // Create nodes: pack name / shape / "Name"_np_class_def. Duplicate replace-strategy props
-    // are a compile error (two OP_name / two NP_shape). Vector-of-handle props: see example4.
-    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
-    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
-    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
-    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
+    // Create nodes via fluent builder (same pack / reduce rules as new_object<node>).
+    // Duplicate replace-strategy props are a compile error (two OP_name / two NP_shape).
+    // Vector-of-handle props: see example4. new_object<node>(...) remains available.
+    node& start = _graph.node() >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
+    node& process = _graph.node() >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
+    node& decision = _graph.node() >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
+    node& end = _graph.node() >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
 
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)).
     // LP_style is bitwise_or: pieces may repeat and OR into one slot (same as composed *_arrow).

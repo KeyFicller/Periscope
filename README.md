@@ -24,12 +24,17 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 ## Example 1: Flowchart (using int as handle)
 
-Create a flowchart with `int` handles. Properties are applied in one deduced pack
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or
-`"Name"_np_class_def` for class styling). Replace-strategy owning props (`OP_name` /
-`NP_shape` / `LP_activate` / …) appear **at most once** in a `new_object` / `>>` pack;
-`LP_style` uses `bitwise_or` so style pieces may repeat and OR into one slot. Sequential
-`.set()` after create is still fine for later mutation.
+Create a flowchart with `int` handles. Prefer the fluent node builder:
+
+`node& n = _graph.node() >> "Name"_op_name >> NP_shape::k_rectangle;`
+
+(`new_object<node>(...)` still works — the builder calls it under the hood.) The builder is a
+**distinct type** until it materializes to `node&`, so node-prop `>>` does not steal one-shot
+edge `>>`. Properties are the same deduced pack as `new_object` (`"..."_op_name`, nested enums
+like `NP_shape::*` / `LP_style::*`, or `"Name"_np_class_def`). Replace-strategy owning props
+(`OP_name` / `NP_shape` / `LP_activate` / …) appear **at most once** in a `new_object` /
+`node() >>` / edge `>>` pack; `LP_style` uses `bitwise_or` so style pieces may repeat and OR
+into one slot. Sequential `.set()` after create is still fine for later mutation.
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
 `std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
 `label{}`).
@@ -43,10 +48,10 @@ int main() {
 
     graph _graph;
 
-    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle);
-    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle);
-    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond);
-    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle);
+    node& start = _graph.node() >> "Start"_op_name >> NP_shape::k_rectangle;
+    node& process = _graph.node() >> "Process Data"_op_name >> NP_shape::k_rectangle;
+    node& decision = _graph.node() >> "Decision"_op_name >> NP_shape::k_diamond;
+    node& end = _graph.node() >> "End"_op_name >> NP_shape::k_rectangle;
 
     // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
     start >> process >> decision >> "Yes"_op_name >> end;
