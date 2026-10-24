@@ -68,9 +68,9 @@ struct NP_class_def : base_property<std::string, node>
     }
 };
 
-// "Start"_np_class_def -> property_literal<NP_class_def> (NP_ = node_property)
+// "Start"_class -> property_literal<NP_class_def>
 inline property_literal<NP_class_def>
-operator""_np_class_def(const char* _str, std::size_t _len)
+operator""_class(const char* _str, std::size_t _len)
 {
     return property_literal<NP_class_def>{ std::string(_str, _len) };
 }
@@ -116,15 +116,15 @@ struct NP_time_tick_end : public NP_time_tick
     using NP_time_tick::NP_time_tick;
 };
 
-// "9:0"_np_time_tick_start / _end -> property_literal so set()/new_object deduce NP_time_tick_*
+// "9:0"_tick_start / _tick_end -> property_literal so set()/new_object deduce NP_time_tick_*
 inline property_literal<NP_time_tick_start>
-operator""_np_time_tick_start(const char* _str, std::size_t _len)
+operator""_tick_start(const char* _str, std::size_t _len)
 {
     return property_literal<NP_time_tick_start>{ operator""_tick(_str, _len) };
 }
 
 inline property_literal<NP_time_tick_end>
-operator""_np_time_tick_end(const char* _str, std::size_t _len)
+operator""_tick_end(const char* _str, std::size_t _len)
 {
     return property_literal<NP_time_tick_end>{ operator""_tick(_str, _len) };
 }

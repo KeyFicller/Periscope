@@ -201,7 +201,7 @@ class graph
 
   public:
     // new_object creates an object and optionally applies deduced properties in one call,
-    // e.g. new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def).
+    // e.g. new_object<node>("Start"_name, NP_shape::k_rectangle, "Start"_class).
     // Replace-strategy (scalar) owning props may appear at most once — duplicate OP_name /
     // NP_shape / … is a compile error. Append (vector) / bitwise_or (flag masks) may repeat;
     // fold via apply_pack_arg (sequential .set() still assigns / replaces).
@@ -245,7 +245,7 @@ class graph
     }
 
     // new_object_at: same deduced property pack as new_object, pinned to a handle
-    // e.g. new_object_at<node>(h, "Client"_op_name, NP_shape::k_rectangle).
+    // e.g. new_object_at<node>(h, "Client"_name, NP_shape::k_rectangle).
     // Pack uniqueness / append fold match new_object.
     template<typename t, typename... args>
     t& new_object_at(const handle<underlying_type>& _handle, args&&... _args)

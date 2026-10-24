@@ -23,9 +23,10 @@ target_link_libraries(your_target PRIVATE Periscope::periscope)
 | --- | --- |
 | `Object(graph) >> props…` | create `node` / `note` / `class_def` (assign or discard; bare `Object(g)` aborts) |
 | `a >> b >> c` | default edges between consecutive nodes |
-| `a >> "Yes"_op_name >> LP_style::k_dashed >> b` | decorations sit between nodes |
+| `a >> "Yes"_name >> LP_style::k_dashed >> b` | decorations sit between nodes |
 | `graph >> GP_…` | configure (`>>` ≡ `set` on `graph&`) |
-| `new_object<T>(…)` / `new_object_at` / `.set<Prop>(…)` | escape hatches; **`link` stays `new_object<link>`** |
+| `"…"_name` / `_class` / `_fill` / `_stroke` / `_color` / `_tick_start` / `_tick_end` | short string UDLs → property literals |
+| `new_object_at` / `.set<Prop>(…)` / `new_object<link>` | escape hatches; **`link` stays `new_object<link>`** |
 | `label{ runtime_string }` | runtime edge/node name (no bare `std::string` on `>>`) |
 | `property_literal<NP_subgraph_node>{ a, b }` | vector-of-handle props |
 
@@ -41,24 +42,23 @@ using namespace periscope;
 
 int main() {
     graph _graph;
-    _graph >> "Hello"_op_name;
-
-    class_def(_graph) >> "Start"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "Process"_op_name >> "#F5A623"_mcd_fill >> "#C97E1C"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "Decision"_op_name >> "#7ED321"_mcd_fill >> "#5FA319"_mcd_stroke >> "#fff"_mcd_color;
-    class_def(_graph) >> "End"_op_name >> "#D0021B"_mcd_fill >> "#A00115"_mcd_stroke >> "#fff"_mcd_color;
-
-    node& start = node(_graph) >> "Start"_op_name >> NP_shape::k_rectangle >> "Start"_np_class_def;
-    node& process = node(_graph) >> "Process Data"_op_name >> NP_shape::k_rectangle >> "Process"_np_class_def;
-    node& decision = node(_graph) >> "Decision"_op_name >> NP_shape::k_diamond >> "Decision"_np_class_def;
-    node& end = node(_graph) >> "End"_op_name >> NP_shape::k_rectangle >> "End"_np_class_def;
-
-    start >> process >> decision >> "Yes"_op_name >> end;
-    decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
-
-    _graph >> GP_type<>::k_flowchart
+    _graph >> "Hello"_name
+           >> GP_type<>::k_flowchart
            >> GP_output_format<>::k_markdown
            >> GP_flowchart_direction<>::k_top_to_down;
+
+    class_def(_graph) >> "Start"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Process"_name >> "#F5A623"_fill >> "#C97E1C"_stroke >> "#fff"_color;
+    class_def(_graph) >> "Decision"_name >> "#7ED321"_fill >> "#5FA319"_stroke >> "#fff"_color;
+    class_def(_graph) >> "End"_name >> "#D0021B"_fill >> "#A00115"_stroke >> "#fff"_color;
+
+    node& start = node(_graph) >> "Start"_name >> NP_shape::k_rectangle >> "Start"_class;
+    node& process = node(_graph) >> "Process Data"_name >> NP_shape::k_rectangle >> "Process"_class;
+    node& decision = node(_graph) >> "Decision"_name >> NP_shape::k_diamond >> "Decision"_class;
+    node& end = node(_graph) >> "End"_name >> NP_shape::k_rectangle >> "End"_class;
+
+    start >> process >> decision >> "Yes"_name >> end;
+    decision >> "No"_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
     std::cout << _graph.to_string() << std::endl;
 }
@@ -160,13 +160,13 @@ Participant ids are the live pointer handles from the run:
 ```mermaid
 sequenceDiagram
 autonumber
-participant 0x7ffeb60b6e40 as Client
-participant 0x7ffeb60b6e20 as Server
-participant 0x7ffeb60b6e00 as Database
-0x7ffeb60b6e40 ->>+ 0x7ffeb60b6e20 : Request Data
-0x7ffeb60b6e20 ->>+ 0x7ffeb60b6e00 : Query
-0x7ffeb60b6e00 ->> 0x7ffeb60b6e20 : Result
-0x7ffeb60b6e20 ->> 0x7ffeb60b6e40 : Response
+participant 0x7fff28976630 as Client
+participant 0x7fff28976610 as Server
+participant 0x7fff289765f0 as Database
+0x7fff28976630 ->>+ 0x7fff28976610 : Request Data
+0x7fff28976610 ->>+ 0x7fff289765f0 : Query
+0x7fff289765f0 ->> 0x7fff28976610 : Result
+0x7fff28976610 ->> 0x7fff28976630 : Response
 ```
 
 ## Example 3 — Gantt
@@ -183,9 +183,9 @@ int main() {
            >> GP_output_format<>::k_markdown
            >> GP_date_format<>::k_hour_minute;
 
-    _graph.new_object<node>("Design"_op_name, "9:0"_np_time_tick_start, "12:0"_np_time_tick_end);
-    _graph.new_object<node>("Build"_op_name, "12:0"_np_time_tick_start, "15:30"_np_time_tick_end);
-    _graph.new_object<node>("Test"_op_name, "15:30"_np_time_tick_start, "17:0"_np_time_tick_end);
+    node(_graph) >> "Design"_name >> "9:0"_tick_start >> "12:0"_tick_end;
+    node(_graph) >> "Build"_name >> "12:0"_tick_start >> "15:30"_tick_end;
+    node(_graph) >> "Test"_name >> "15:30"_tick_start >> "17:0"_tick_end;
 
     std::cout << _graph.to_string() << std::endl;
 }
@@ -215,22 +215,21 @@ int main() {
          >> GP_output_format<>::k_markdown
          >> GP_flowchart_direction<>::k_top_to_down;
 
-    class_def(flow) >> "GroupStyle"_op_name >> "#4A90E2"_mcd_fill >> "#2E5C8A"_mcd_stroke >> "#fff"_mcd_color;
+    class_def(flow) >> "GroupStyle"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
 
-    node& a = flow.new_object<node>("A"_op_name, NP_shape::k_rectangle);
-    node& b = flow.new_object<node>("B"_op_name, NP_shape::k_rectangle);
-    node& c = flow.new_object<node>("C"_op_name, NP_shape::k_rectangle);
-    flow.new_object<node>(
-        "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
+    node& a = node(flow) >> "A"_name >> NP_shape::k_rectangle;
+    node& b = node(flow) >> "B"_name >> NP_shape::k_rectangle;
+    node& c = node(flow) >> "C"_name >> NP_shape::k_rectangle;
+    node(flow) >> "Group"_name >> property_literal<NP_subgraph_node>{ a, b, c } >> "GroupStyle"_class;
 
     std::cout << flow.to_string() << std::endl;
 
     graph seq;
     seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
-    node& client = seq.new_object<node>("Client"_op_name);
-    node& server = seq.new_object<node>("Server"_op_name);
-    note(seq) >> "shared context"_op_name >> property_literal<MNP_basis>{ client, server };
-    note(seq) >> "on client"_op_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
+    node& client = node(seq) >> "Client"_name;
+    node& server = node(seq) >> "Server"_name;
+    note(seq) >> "shared context"_name >> property_literal<MNP_basis>{ client, server };
+    note(seq) >> "on client"_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
 
     std::cout << seq.to_string() << std::endl;
 }
