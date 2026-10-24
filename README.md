@@ -26,9 +26,10 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 
 Create a flowchart with `int` handles. Properties are applied in one deduced pack
 (`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or
-`"Name"_np_class_def` for class styling); each owning property may appear **at most once** in a
-`new_object` / `>>` pack (duplicate `OP_name` / `NP_shape` / `LP_style` / `LP_activate`
-is a compile error). Sequential `.set()` after create is still fine for later mutation.
+`"Name"_np_class_def` for class styling). Replace-strategy owning props (`OP_name` /
+`NP_shape` / `LP_activate` / …) appear **at most once** in a `new_object` / `>>` pack;
+`LP_style` uses `bitwise_or` so style pieces may repeat and OR into one slot. Sequential
+`.set()` after create is still fine for later mutation.
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
 `std::string` / `const char*` on `>>` — literals use `"..."_op_name`, runtime names use
 `label{}`).
@@ -49,7 +50,8 @@ int main() {
 
     // One-shot >> chains; decorations (UDLs / nested enums) sit between nodes.
     start >> process >> decision >> "Yes"_op_name >> end;
-    decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
+    // LP_style pieces OR (same as k_dashed_arrow):
+    decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
     _graph.set(GP_type<>::k_flowchart)
           .set(GP_output_format<>::k_markdown)

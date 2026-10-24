@@ -108,7 +108,7 @@ periscope_property_of(const property_literal<prop>&)
 // property_reduce: how duplicate owning keys in a deduced pack / >> chain fold.
 // replace (default, scalars): at most one appearance (pack-level uniqueness).
 // append (vector-valued props): multiple appearances concatenate into one slot.
-// bitwise_or: reserved for flag masks (not folded yet).
+// bitwise_or (flag masks, e.g. LP_style): multiple appearances OR into one slot.
 enum class property_reduce
 {
     replace,
@@ -145,7 +145,13 @@ concept appendable_sequence = requires(t& seq, const t& other) {
     seq.insert(seq.end(), other.begin(), other.end());
 };
 
-// Only replace-strategy keys participate in pack uniqueness; append keys may repeat.
+// Integral / enum mask that supports | (flag-style owning props).
+template<typename t>
+concept bitwise_or_foldable = requires(t a, t b) {
+    static_cast<t>(a | b);
+};
+
+// Only replace-strategy keys participate in pack uniqueness; append / bitwise_or may repeat.
 template<typename prop>
 using replace_key_list = std::conditional_t<prop::reduce == property_reduce::replace, type_list<prop>, type_list<>>;
 
@@ -154,7 +160,7 @@ template<typename... props>
 using replace_keys_t = type_list_concat_t<type_list<>, replace_key_list<props>...>;
 
 // Pack-level uniqueness among replace keys only (sizeof pack_replace == unique).
-// Shared by new_object / >>. Append (vector) keys are excluded — folded at apply time.
+// Shared by new_object / >>. Append / bitwise_or keys are excluded — folded at apply time.
 template<typename... props>
 inline constexpr bool owning_properties_unique_v =
   replace_keys_t<props...>::size == type_list_unique_t<replace_keys_t<props...>>::size;
@@ -173,7 +179,7 @@ struct base_property
     using owner_type = owner;
     using child_properties = type_list<>;
     using parent_properties = type_list<>;
-    // Default: scalar uniqueness. Vector props override to append.
+    // Default: scalar uniqueness. Vectors override to append; flag masks to bitwise_or.
     static constexpr property_reduce reduce = property_reduce::replace;
 };
 

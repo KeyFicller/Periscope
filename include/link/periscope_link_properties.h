@@ -20,9 +20,10 @@ struct LP_target : public base_property<std::shared_ptr<base_handle>, link>
     using owner_type = link;
 };
 
-// LP_style is property for link line style
+// LP_style is property for link line style (flag mask → bitwise_or in deduced packs / >>).
 struct LP_style : public base_property<enum_type, link>
 {
+    static constexpr property_reduce reduce = property_reduce::bitwise_or;
 
     enum style : enum_type
     {
