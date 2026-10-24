@@ -1,6 +1,5 @@
 #pragma once
 
-#include "misc/periscope_class_def.h"
 #include "node/periscope_node_properties.h"
 #include "object/periscope_object.h"
 #include "object/periscope_object_properties.h"
@@ -14,18 +13,6 @@ class node : public object<node>
 {
   public:
     node() { set<OP_printable>(true); }
-
-    // Bring object<node>::set overloads into scope (non-template set below would hide them).
-    using object<node>::set;
-
-    // Typed NP_class_def bind: use the class_def object (its OP_name) instead of a
-    // stringly-typed "Name"_np_class_def when the definition is in scope.
-    node& set(const class_def& _class)
-    {
-        if (!_class.has<OP_name>())
-            throw std::runtime_error("periscope: class_def used as NP_class_def requires OP_name");
-        return set<NP_class_def>(_class.get<OP_name>().Value);
-    }
 
   public:
     // to_string_impl is implementation of object::to_string_impl

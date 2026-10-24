@@ -25,8 +25,8 @@ Then `#include "periscope.h"`. Linking `Periscope::periscope` propagates the `in
 ## Example 1: Flowchart (using int as handle)
 
 Create a flowchart with `int` handles. Properties are applied in one deduced pack
-(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or a `class_def&`
-for typed `NP_class_def` bind); each owning property may appear **at most once** in a
+(`"..."_op_name`, nested enums like `NP_shape::*` / `LP_style::*`, or
+`"Name"_np_class_def` for class styling); each owning property may appear **at most once** in a
 `new_object` / `>>` pack (duplicate `OP_name` / `NP_shape` / `LP_style` / `LP_activate`
 is a compile error). Sequential `.set()` after create is still fine for later mutation.
 Edges are **one-shot**: write the full `a >> props >> b` expression (no bare
@@ -198,10 +198,9 @@ gantt
 
 ## Example 4: classDef, subgraph, and sequence notes
 
-`class_def&` in a `new_object<node>` pack binds `NP_class_def` from the definition's
-`OP_name` (prefer this over stringly-typed `"Name"_np_class_def` when the object is in
-scope). Vector-of-handle props take `property_literal<Prop>{ node_a, node_b }` — no
-`.get_handle()` at the call site (`NP_subgraph_node`, `MNP_basis`).
+Style nodes with `"Name"_np_class_def` (literal). Vector-of-handle props take
+`property_literal<Prop>{ node_a, node_b }` — no `.get_handle()` at the call site
+(`NP_subgraph_node`, `MNP_basis`).
 
 ```cpp
 #include "periscope.h"
@@ -215,13 +214,14 @@ int main() {
         .set(GP_output_format<>::k_markdown)
         .set(GP_flowchart_direction<>::k_top_to_down);
 
-    class_def& style = flow.new_object<class_def>(
+    flow.new_object<class_def>(
         "GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
 
     node& a = flow.new_object<node>("A"_op_name, NP_shape::k_rectangle);
     node& b = flow.new_object<node>("B"_op_name, NP_shape::k_rectangle);
     node& c = flow.new_object<node>("C"_op_name, NP_shape::k_rectangle);
-    flow.new_object<node>("Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, style);
+    flow.new_object<node>(
+        "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
 
     std::cout << flow.to_string() << std::endl;
 
@@ -241,6 +241,7 @@ int main() {
 
 ```mermaid
 flowchart TD
+
 classDef GroupStyleClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
 0@{ shape: rect, label: A }
 1@{ shape: rect, label: B }
@@ -250,12 +251,12 @@ subgraph 3["Group"]
 1
 2
 end
-
 class 3 GroupStyleClass
 ```
 
 ```mermaid
 sequenceDiagram
+
 participant 0 as Client
 participant 1 as Server
 Note over 0, 1 : shared context

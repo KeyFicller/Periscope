@@ -11,23 +11,18 @@ example1_flowchart()
     graph _graph;
     _graph.set("Hello"_op_name);
 
-    // Class defs: keep refs so nodes can bind NP_class_def by object (typed), not by string name.
-    class_def& start_cls =
-      _graph.new_object<class_def>("Start"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
-    class_def& process_cls =
-      _graph.new_object<class_def>("Process"_op_name, "#F5A623"_mcd_fill, "#C97E1C"_mcd_stroke, "#fff"_mcd_color);
-    class_def& decision_cls =
-      _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
-    class_def& end_cls =
-      _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
+    // Class defs + literal NP_class_def bind ("Name"_np_class_def).
+    _graph.new_object<class_def>("Start"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("Process"_op_name, "#F5A623"_mcd_fill, "#C97E1C"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("Decision"_op_name, "#7ED321"_mcd_fill, "#5FA319"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("End"_op_name, "#D0021B"_mcd_fill, "#A00115"_mcd_stroke, "#fff"_mcd_color);
 
-    // Create nodes: pack name / shape / class_def&. Duplicate replace-strategy props are a
-    // compile error (two OP_name / two NP_shape). "Name"_np_class_def still works when the
-    // class_def is out of scope. Vector-of-handle props: see example4.
-    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, start_cls);
-    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, process_cls);
-    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, decision_cls);
-    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, end_cls);
+    // Create nodes: pack name / shape / "Name"_np_class_def. Duplicate replace-strategy props
+    // are a compile error (two OP_name / two NP_shape). Vector-of-handle props: see example4.
+    node& start = _graph.new_object<node>("Start"_op_name, NP_shape::k_rectangle, "Start"_np_class_def);
+    node& process = _graph.new_object<node>("Process Data"_op_name, NP_shape::k_rectangle, "Process"_np_class_def);
+    node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
+    node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
 
     // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)):
     // composed LP_style::*_*_arrow avoids `k_dashed | k_arrow_mask` and trailing .set()
@@ -135,24 +130,24 @@ example3_gantt()
 }
 
 // Example 4: subgraph + sequence notes — property_literal<Prop>{ node_a, node_b }
-// packs handles (no .get_handle()). class_def& binds NP_class_def by object.
+// packs handles (no .get_handle()). NP_class_def via "Name"_np_class_def literal.
 void
 example4_subgraph_and_notes()
 {
     graph _graph;
     _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);
 
-    class_def& group_cls =
-      _graph.new_object<class_def>("GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
+    _graph.new_object<class_def>("GroupStyle"_op_name, "#4A90E2"_mcd_fill, "#2E5C8A"_mcd_stroke, "#fff"_mcd_color);
 
     node& a = _graph.new_object<node>("A"_op_name, NP_shape::k_rectangle);
     node& b = _graph.new_object<node>("B"_op_name, NP_shape::k_rectangle);
     node& c = _graph.new_object<node>("C"_op_name, NP_shape::k_rectangle);
 
-    // One NP_subgraph_node chunk from node refs; optional class_def& on the group node.
-    node& group = _graph.new_object<node>("Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, group_cls);
+    // One NP_subgraph_node chunk from node refs; class style via "Name"_np_class_def.
+    node& group = _graph.new_object<node>(
+      "Group"_op_name, property_literal<NP_subgraph_node>{ a, b, c }, "GroupStyle"_np_class_def);
 
-    std::cout << "=== Example 4: subgraph + class_def bind ===\n";
+    std::cout << "=== Example 4: subgraph + classDef literal ===\n";
     std::cout << "subgraph member count (expect 3): " << group.get<NP_subgraph_node>().Value.size() << "\n";
     std::cout << _graph.to_string() << "\n";
 
