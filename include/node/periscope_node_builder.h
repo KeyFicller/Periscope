@@ -6,7 +6,6 @@
 #include "node/periscope_node.h"
 #include "object/periscope_object_properties.h"
 #include "type_traits/periscope_type_list.h"
-#include <any>
 #include <cstdio>
 #include <cstdlib>
 #include <tuple>
@@ -14,9 +13,6 @@
 #include <utility>
 
 namespace periscope {
-template<typename underlying_type, typename... props>
-struct node_builder;
-
 namespace detail {
 // Properties applicable to a node: node-owned props, or base_object props shared by all objects
 // (OP_name). Mirrors link_applicable_property for the node(graph) >> builder chain.
@@ -24,20 +20,6 @@ template<typename prop>
 concept node_applicable_property = requires {
     typename prop::owner_type;
 } && (std::is_base_of_v<node, typename prop::owner_type> || std::is_same_v<base_object, typename prop::owner_type>);
-
-// Typed create-intermediary state stashed in node::m_create by node(graph&).
-// Fluent node(graph) supports default graph<> (int handles) so >> can keep a single return type.
-template<typename underlying_type>
-struct node_create_bridge
-{
-    graph<underlying_type>* Graph = nullptr;
-
-    template<typename deco>
-    auto append(deco _decoration)
-    {
-        return node_builder<underlying_type>{ Graph } >> std::move(_decoration);
-    }
-};
 } // namespace detail
 
 // Nested property enums whose owning property applies to node (e.g. NP_shape::shape)
@@ -49,28 +31,34 @@ concept node_property_literal =
   property_literal_value<lit> && detail::node_applicable_property<typename std::remove_cvref_t<lit>::property>;
 
 // node_decoration lists what may sit in a `node(graph) >> …` builder chain.
+// Same deduced forms as new_object<node> (UDL / nested enum / property_literal packs).
+// Bare std::string / const char* / label{} are excluded (label{} is edge-only).
 template<typename t>
 concept node_decoration = node_property_enum<t> || node_property_literal<t>;
 
-template<typename underlying_type, typename... props>
+// node_builder is a typed incomplete node create used only as a temporary in a one-shot
+// `node(graph) >> props…` expression. Distinct from pending_link / edge `>>` so node props
+// do not steal edge syntax. Materializes to node& via conversion (calls new_object<node>,
+// then apply_pack_arg for the accumulated pack). Incomplete builders must not be discarded:
+// [[nodiscard]] + destructor abort if still live.
+template<typename... props>
 struct [[nodiscard("incomplete node(graph) builder: assign to node& (or cast) to materialize")]] node_builder
 {
-    graph<underlying_type>* Graph = nullptr;
+    void* Graph = nullptr;
+    node& (*CreateFn)(void*) = nullptr;
     std::tuple<props...> Props{};
 
     node_builder() = default;
-    explicit node_builder(graph<underlying_type>* _graph)
+    node_builder(void* _graph, node& (*_create_fn)(void*), std::tuple<props...> _props = {})
       : Graph(_graph)
-    {
-    }
-    node_builder(graph<underlying_type>* _graph, std::tuple<props...> _props)
-      : Graph(_graph)
+      , CreateFn(_create_fn)
       , Props(std::move(_props))
     {
     }
 
     node_builder(node_builder&& other) noexcept
       : Graph(std::exchange(other.Graph, nullptr))
+      , CreateFn(std::exchange(other.CreateFn, nullptr))
       , Props(std::move(other.Props))
     {
     }
@@ -78,6 +66,7 @@ struct [[nodiscard("incomplete node(graph) builder: assign to node& (or cast) to
     {
         if (this != &other) {
             Graph = std::exchange(other.Graph, nullptr);
+            CreateFn = std::exchange(other.CreateFn, nullptr);
             Props = std::move(other.Props);
         }
         return *this;
@@ -85,15 +74,20 @@ struct [[nodiscard("incomplete node(graph) builder: assign to node& (or cast) to
     node_builder(const node_builder&) = delete;
     node_builder& operator=(const node_builder&) = delete;
 
+    // Materialize into the owning graph (same pack rules as new_object<node>).
+    // Rvalue-only so a named builder cannot be converted twice.
     operator node&() &&
     {
-        graph<underlying_type>* g = std::exchange(Graph, nullptr);
+        void* g = std::exchange(Graph, nullptr);
+        auto* create = std::exchange(CreateFn, nullptr);
         auto pack = std::move(Props);
-        return std::apply(
-          [g](auto&&... _p) -> node& { return g->template new_object<node>(std::forward<decltype(_p)>(_p)...); },
-          std::move(pack));
+        node& n = create(g);
+        std::apply([&n](auto&&... _p) { (n.apply_pack_arg(std::forward<decltype(_p)>(_p)), ...); }, std::move(pack));
+        return n;
     }
 
+    // A non-null Graph here means the builder never materialized (silent no-op would drop props).
+    // Abort (not throw): safe if destruction runs during another exception unwind.
     ~node_builder()
     {
         if (Graph == nullptr)
@@ -104,52 +98,61 @@ struct [[nodiscard("incomplete node(graph) builder: assign to node& (or cast) to
         std::abort();
     }
 
-    void release() noexcept { Graph = nullptr; }
+    void release() noexcept
+    {
+        Graph = nullptr;
+        CreateFn = nullptr;
+    }
 };
 
-template<typename underlying_type, typename... props, typename deco>
+// ---- growing a node builder pack (typed; any deduced node property / UDL) ----
+
+template<typename... props, typename deco>
     requires node_decoration<deco>
 auto
-operator>>(node_builder<underlying_type, props...>&& _builder, deco _decoration)
+operator>>(node_builder<props...>&& _builder, deco _decoration)
 {
+    // Reject duplicate *replace-strategy* owning properties at the append site (vs. silent
+    // overwrite at set). Same helper as new_object / edge >>. Append / bitwise_or may repeat.
     static_assert(detail::deduced_args_unique_v<props..., deco>,
                   "periscope: duplicate replace-strategy owning property in node(graph) >> chain");
     using normalized = std::remove_cvref_t<deco>;
-    graph<underlying_type>* g = _builder.Graph;
+    void* g = _builder.Graph;
+    auto* create = _builder.CreateFn;
     auto pack = std::move(_builder.Props);
     _builder.release();
-    return node_builder<underlying_type, props..., normalized>{
-        g, std::tuple_cat(std::move(pack), std::make_tuple(std::move(_decoration)))
+    return node_builder<props..., normalized>{
+        g, create, std::tuple_cat(std::move(pack), std::make_tuple(std::move(_decoration)))
     };
 }
 
 // ---- node(graph&) create-intermediary (constructor entry; type name stays `node`) ----
 
 template<typename underlying_type>
-node::node(graph<underlying_type>& _graph)
+node::node(graph<underlying_type>& _graph) noexcept
+  : m_create_graph(&_graph)
+  , m_create_fn(+[](void* p) -> node& {
+        return static_cast<graph<underlying_type>*>(p)->template new_object<node>();
+    })
 {
-    static_assert(std::is_same_v<underlying_type, int>,
-                  "periscope: node(graph) fluent create supports graph<> (int handles) only; "
-                  "use new_object<node>(...) for other handle types");
-    m_create = detail::node_create_bridge<int>{ &_graph };
+    // Hollow temporary — not OP_printable, not inserted; first `>>` starts node_builder.
 }
 
+// Rvalue node >> deco starts the typed builder (lvalue node& >> deco remains edge start).
 template<typename deco>
     requires node_decoration<deco>
 auto
 operator>>(node&& _n, deco _decoration)
 {
-    std::any bridge = _n.take_create();
-    if (!bridge.has_value()) {
+    if (!_n.is_create_seed()) {
         std::fputs("periscope: node&& >> prop — not a create-intermediary (use node(graph) >> props)\n",
                    stderr);
         std::abort();
     }
-    auto* b = std::any_cast<detail::node_create_bridge<int>>(&bridge);
-    if (b == nullptr) {
-        std::fputs("periscope: node(graph) create — internal bridge type mismatch\n", stderr);
-        std::abort();
-    }
-    return b->append(std::move(_decoration));
+    auto seed = _n.extract_create();
+    using normalized = std::remove_cvref_t<deco>;
+    static_assert(detail::deduced_args_unique_v<deco>,
+                  "periscope: duplicate replace-strategy owning property in node(graph) >> chain");
+    return node_builder<normalized>{ seed.Graph, seed.CreateFn, std::make_tuple(std::move(_decoration)) };
 }
 } // namespace periscope
