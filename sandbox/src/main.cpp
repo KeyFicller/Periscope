@@ -24,16 +24,16 @@ example1_flowchart()
     node& decision = _graph.new_object<node>("Decision"_op_name, NP_shape::k_diamond, "Decision"_np_class_def);
     node& end = _graph.new_object<node>("End"_op_name, NP_shape::k_rectangle, "End"_np_class_def);
 
-    // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)):
-    // composed LP_style::*_*_arrow avoids `k_dashed | k_arrow_mask` and trailing .set()
+    // Link props live in the `>>` chain as nested enums / UDLs (same deduction as set(enum)).
+    // LP_style is bitwise_or: pieces may repeat and OR into one slot (same as composed *_arrow).
     start >> process >> decision >> "Yes"_op_name >> end;
     // Incomplete chain (no destination) is rejected: typed pending_link<...> is [[nodiscard]]
     // and its destructor aborts if never connected — e.g. the following would fail, not silently drop:
     //   decision >> "No"_op_name >> LP_style::k_dashed_arrow;
     // Duplicate replace-strategy props in one chain are a compile error, e.g.:
     //   decision >> "No"_op_name >> label{"x"} >> process;          // two OP_name
-    //   decision >> LP_style::k_dashed >> LP_style::k_solid >> process; // two LP_style
-    decision >> "No"_op_name >> LP_style::k_dashed_arrow >> process;
+    // Piece-wise LP_style folds via bitwise_or (equiv. k_dashed_arrow):
+    decision >> "No"_op_name >> LP_style::k_dashed >> LP_style::k_arrow_mask >> process;
 
     // Configure graph: nested enums via set(enum), same pattern as NP_shape / GP_date_format
     _graph.set(GP_type<>::k_flowchart).set(GP_output_format<>::k_markdown).set(GP_flowchart_direction<>::k_top_to_down);

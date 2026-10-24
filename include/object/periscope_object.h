@@ -217,7 +217,7 @@ class object : public base_object
 
     // apply_pack_arg: reduce-aware apply for deduced packs (new_object / >> connect).
     // replace → same as set (assign). append → concatenate into the existing slot.
-    // Sequential .set() stays assign-only; only pack/connect folding uses this.
+    // bitwise_or → OR into the existing slot (flag masks). Sequential .set() stays assign-only.
     template<typename lit>
         requires property_literal_value<lit>
     derived& apply_pack_arg(lit _literal)
@@ -230,6 +230,13 @@ class object : public base_object
             auto&& chunk = std::move(_literal.Value);
             slot.insert(slot.end(), chunk.begin(), chunk.end());
             return static_cast<derived&>(*this);
+        } else if constexpr (prop::reduce == property_reduce::bitwise_or) {
+            static_assert(detail::bitwise_or_foldable<typename prop::type>,
+                          "periscope: bitwise_or reduce requires a | -foldable property type");
+            using vt = typename prop::type;
+            auto& slot = get_or_create<prop>().Value;
+            slot = static_cast<vt>(slot | static_cast<vt>(std::move(_literal.Value)));
+            return static_cast<derived&>(*this);
         } else {
             return set<prop>(std::move(_literal.Value));
         }
@@ -240,10 +247,19 @@ class object : public base_object
     derived& apply_pack_arg(e _value)
     {
         using prop = property_of_t<e>;
-        // Nested enums are scalars today (replace). append enums would need a sequence value.
-        static_assert(prop::reduce == property_reduce::replace,
-                      "periscope: append reduce is for sequence property_literal packs, not enums");
-        return set(_value);
+        if constexpr (prop::reduce == property_reduce::bitwise_or) {
+            static_assert(detail::bitwise_or_foldable<typename prop::type>,
+                          "periscope: bitwise_or reduce requires a | -foldable property type");
+            using vt = typename prop::type;
+            auto& slot = get_or_create<prop>().Value;
+            slot = static_cast<vt>(slot | static_cast<vt>(_value));
+            return static_cast<derived&>(*this);
+        } else {
+            // Nested enums are replace (or bitwise_or above). Append needs a sequence literal.
+            static_assert(prop::reduce == property_reduce::replace,
+                          "periscope: append reduce is for sequence property_literal packs, not enums");
+            return set(_value);
+        }
     }
 
   public:
