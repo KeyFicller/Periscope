@@ -126,66 +126,6 @@ gantt
     Test : 15:30, 17:00
 ```
 
-## Example 4 — classDef, subgraph, notes
-
-Vector-of-handle props: `property_literal<Prop>{ node_a, node_b }` (no `.get_handle()`).
-
-```cpp
-#include "periscope.h"
-#include <iostream>
-
-using namespace periscope;
-
-int main() {
-    graph flow;
-    flow >> GP_type<>::k_flowchart
-         >> GP_output_format<>::k_markdown
-         >> GP_flowchart_direction<>::k_top_to_down;
-
-    class_def(flow) >> "GroupStyle"_name >> "#4A90E2"_fill >> "#2E5C8A"_stroke >> "#fff"_color;
-
-    node& a = node(flow) >> "A"_name >> NP_shape::k_rectangle;
-    node& b = node(flow) >> "B"_name >> NP_shape::k_rectangle;
-    node& c = node(flow) >> "C"_name >> NP_shape::k_rectangle;
-    node(flow) >> "Group"_name >> property_literal<NP_subgraph_node>{ a, b, c } >> "GroupStyle"_class;
-
-    std::cout << flow.to_string() << std::endl;
-
-    graph seq;
-    seq >> GP_type<>::k_sequence >> GP_output_format<>::k_markdown;
-    node& client = node(seq) >> "Client"_name;
-    node& server = node(seq) >> "Server"_name;
-    note(seq) >> "shared context"_name >> property_literal<MNP_basis>{ client, server };
-    note(seq) >> "on client"_name >> property_literal<MNP_basis>{ client } >> MNP_orient::k_right;
-
-    std::cout << seq.to_string() << std::endl;
-}
-```
-
-```mermaid
-flowchart TD
-classDef GroupStyleClass fill:#4A90E2,stroke:#2E5C8A,color:#fff
-1@{ shape: rect, label: A }
-2@{ shape: rect, label: B }
-3@{ shape: rect, label: C }
-subgraph 4["Group"]
-1
-2
-3
-end
-
-class 4 GroupStyleClass
-```
-
-```mermaid
-sequenceDiagram
-
-participant OBJ5 as Client
-participant OBJ6 as Server
-Note over OBJ5, OBJ6 : shared context
-Note right of OBJ5 : on client
-```
-
 ## Build
 
 ```bash
