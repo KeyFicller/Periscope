@@ -2,36 +2,6 @@
 
 C++20 header-only library that builds Mermaid diagrams (flowchart, sequence, gantt) from typed graph objects.
 
-## Build
-
-```bash
-cmake -S . -B build && cmake --build build
-./build/bin/PERISCOPE_SANDBOX
-```
-
-In another project (`add_subdirectory` / `FetchContent` / `find_package(Periscope)`):
-
-```cmake
-target_link_libraries(your_target PRIVATE Periscope::periscope)
-```
-
-`#include "periscope.h"` — linking `Periscope::periscope` pulls in `include/` and C++20.
-
-## API at a glance
-
-| Spell | Meaning |
-| --- | --- |
-| `Object(graph) >> props…` | create `node` / `note` / `class_def` (assign or discard; bare `Object(g)` aborts) |
-| `a >> b >> c` | default edges between consecutive nodes |
-| `a >> "Yes"_name >> LP_style::k_dashed >> b` | decorations sit between nodes |
-| `graph >> GP_…` | configure (`>>` ≡ `set` on `graph&`) |
-| `"…"_name` / `_class` / `_fill` / `_stroke` / `_color` / `_tick_start` / `_tick_end` | short string UDLs → property literals |
-| `new_object_at` / `.set<Prop>(…)` / `new_object<link>` | escape hatches; **`link` stays `new_object<link>`** |
-| `label{ runtime_string }` | runtime edge/node name (no bare `std::string` on `>>`) |
-| `property_literal<NP_subgraph_node>{ a, b }` | vector-of-handle props |
-
-Mermaid under each example is the verbatim `to_string()` body from running that snippet alone.
-
 ## Example 1 — Flowchart
 
 ```cpp
@@ -215,3 +185,33 @@ participant OBJ6 as Server
 Note over OBJ5, OBJ6 : shared context
 Note right of OBJ5 : on client
 ```
+
+## Build
+
+```bash
+cmake -S . -B build && cmake --build build
+./build/bin/PERISCOPE_SANDBOX
+```
+
+In another project (`add_subdirectory` / `FetchContent` / `find_package(Periscope)`):
+
+```cmake
+target_link_libraries(your_target PRIVATE Periscope::periscope)
+```
+
+`#include "periscope.h"` — linking `Periscope::periscope` pulls in `include/` and C++20.
+
+## API at a glance
+
+| Spell | Meaning |
+| --- | --- |
+| `Object(graph) >> props…` | create `node` / `note` / `class_def` (assign or discard; bare `Object(g)` aborts) |
+| `a >> b >> c` | default edges between consecutive nodes |
+| `a >> "Yes"_name >> LP_style::k_dashed >> b` | decorations sit between nodes |
+| `graph >> GP_…` | configure (`>>` ≡ `set` on `graph&`) |
+| `"…"_name` / `_class` / `_fill` / `_stroke` / `_color` / `_tick_start` / `_tick_end` | short string UDLs → property literals |
+| `new_object_at` / `.set<Prop>(…)` / `new_object<link>` | escape hatches; **`link` stays `new_object<link>`** |
+| `label{ runtime_string }` | runtime edge/node name (no bare `std::string` on `>>`) |
+| `property_literal<NP_subgraph_node>{ a, b }` | vector-of-handle props |
+
+Mermaid under each example is the verbatim `to_string()` body from running that snippet alone.
